@@ -1,5 +1,5 @@
-# Procesamiento Natural del Lenguaje
-Este repositorio contiene el material de clases (presentaciones, ejercicios y notebooks) para PNL (CEIA - FIUBA)
+# Procesamiento del Lenguaje natural
+Este repositorio contiene el material de clases (presentaciones, ejercicios y notebooks) para NLP (CEIA - FIUBA)
 
 ## Contenido
 
