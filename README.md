@@ -21,21 +21,21 @@ Este repositorio contiene el material de clases (presentaciones, ejercicios y no
 * Problemas de secuencia
 * Estimación de próxima palabra
 
-### Clase 5(clase_5/README.md)
+### [Clase 5](clase_5/README.md)
 * Redes LSTM
 * Análisis de sentimientos (sentiment analysis)
     
-### Clase 6(clase_6/README.md)
+### [Clase 6](clase_6/README.md)
 * Modelos Seq2Seq
 * Bots conversacionales y traductores
 
-### Clase 7(clase_7/README.md)
+### [Clase 7](clase_7/README.md)
 * Celdas con Attention
 * Transformers
 * BERT y ELMo
 * Fine tuning
 
-### Clase 8(clase_8/README.md)
+### [Clase 8](clase_8/README.md)
 * Cierre del curso
 * Deployment de servicio NLP
 * Flask, APIs
