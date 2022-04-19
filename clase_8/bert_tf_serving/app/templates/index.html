@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html >
+<head>
+  <meta charset="UTF-8">
+  <title>BERT APP</title>
+</head>
+
+<body>
+   <div class="form">
+      <h1>BERT classifier</h1>
+
+        <!-- Formulario para recibir los parámetros para predicir  -->
+        <form action="{{ url_for('predict')}}"method="post">
+          <input type="text" name="input_text" required="required" />
+          <button type="submit" onsubmit="return false" class="btn btn-primary btn-block btn-large">Predict</button>
+        </form>
+
+      <br>
+      <br>
+      <h1>{{ prediction_text }}</h1>
+    </div>
+
+
+</body>
+</html>

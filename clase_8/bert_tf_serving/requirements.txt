@@ -1,0 +1,4 @@
+requests==2.26.0
+numpy=1.19.5
+flask==2.0.2
+transformers=4.11.3
