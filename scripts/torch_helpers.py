@@ -483,7 +483,57 @@ class Tokenizer(object):
     config = self.get_config()
     tokenizer_config = {'class_name': self.__class__.__name__, 'config': config}
     return json.dumps(tokenizer_config, **kwargs)
-    
+
+
+class CustomRNN(nn.Module):
+    """
+    Referencia:
+    http://karpathy.github.io/2015/05/21/rnn-effectiveness/
+    """
+    def __init__(self, input_size, hidden_size, activation=nn.Tanh()):
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        
+        #i_t (input gate)
+        self.W_i = nn.Parameter(torch.Tensor(self.input_size, self.hidden_size))
+        self.U_i = nn.Parameter(torch.Tensor(self.hidden_size, self.hidden_size))
+        self.b_i = nn.Parameter(torch.Tensor(self.hidden_size))
+        
+        self.activation = activation
+
+        self.init_weights()
+
+    def init_weights(self):
+        '''
+        Inicializar de forma random los pesos
+        '''
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, x, init_states=None):
+        '''
+        Esta función trabaja por defecto como si batch_first=True
+        '''
+        bs, seq_sz, _ = x.size()
+        hidden_seq = []
+
+        if init_states is None:
+            h_t = torch.zeros(bs, self.hidden_size).to(x.device)
+        else:
+            h_t = init_states
+
+        for t in range(seq_sz):
+            x_t = x[:, t, :]
+            h_t = self.activation(x_t @ self.W_i + h_t @ self.U_i + self.b_i)
+            hidden_seq.append(h_t.unsqueeze(0))
+
+        # reshape hidden_seq for return
+        hidden_seq = torch.cat(hidden_seq, dim=0)
+        hidden_seq = hidden_seq.transpose(0, 1).contiguous()
+        return hidden_seq, h_t
+
 
 class CustomLSTM(nn.Module):
     """
