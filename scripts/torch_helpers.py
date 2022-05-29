@@ -1,6 +1,13 @@
 import collections
 import json
 import warnings
+import math
+
+import numpy as np
+
+import torch
+from torch import nn
+
 
 '''
 Funciones de ayuda tomadas de la libreria de Keras
@@ -478,10 +485,6 @@ class Tokenizer(object):
     tokenizer_config = {'class_name': self.__class__.__name__, 'config': config}
     return json.dumps(tokenizer_config, **kwargs)
     
-
-import torch
-from torch import nn
-import math
 
 class CustomLSTM(nn.Module):
     """
