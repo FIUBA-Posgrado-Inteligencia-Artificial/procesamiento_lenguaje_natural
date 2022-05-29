@@ -490,6 +490,11 @@ class CustomLSTM(nn.Module):
     Referencia:
     https://www.youtube.com/watch?v=yMyBd7iNKho
 
+    Implementaciones similares:
+    https://stackoverflow.com/questions/49040180/change-tanh-activation-in-lstm-to-relu
+    https://theaisummer.com/understanding-lstm/
+    https://medium.com/huggingface/understanding-emotions-from-keras-to-pytorch-3ccb61d5a983    
+
     NOTA: La LSTM origianl de pytorch posee un bias adicional "V_f"
     por lo que notará diferencia entre la cantidad de "W" entre esta implementación clásica
     y la de pytoch. Esta implementación es fiel al paper original y a Tensorflow.
