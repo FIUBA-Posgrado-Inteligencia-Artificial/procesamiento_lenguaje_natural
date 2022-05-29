@@ -158,7 +158,6 @@ def pad_sequences(sequences, maxlen=None, dtype='int32',
       raise ValueError(f'Padding type "{padding}" not understood')
   return x
 
-#import numpy as np
 class Tokenizer(object):
   """Text tokenization utility class.
   Deprecated: `tf.keras.preprocessing.text.Tokenizer` does not operate on
