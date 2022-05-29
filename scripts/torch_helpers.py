@@ -490,6 +490,10 @@ class CustomLSTM(nn.Module):
     Referencia:
     https://www.youtube.com/watch?v=yMyBd7iNKho
 
+    NOTA: La LSTM origianl de pytorch posee un bias adicional "V_f"
+    por lo que notará diferencia entre la cantidad de "W" entre esta implementación clásica
+    y la de pytoch. Esta implementación es fiel al paper original y a Tensorflow.
+
     """
     def __init__(self, input_size, hidden_size, activation=nn.Tanh(), recurrent_activation=nn.Sigmoid()):
         super().__init__()
