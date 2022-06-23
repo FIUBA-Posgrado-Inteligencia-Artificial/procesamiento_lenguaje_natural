@@ -1,6 +1,13 @@
 import collections
 import json
 import warnings
+import math
+
+import numpy as np
+
+import torch
+from torch import nn
+
 
 '''
 Funciones de ayuda tomadas de la libreria de Keras
@@ -151,7 +158,6 @@ def pad_sequences(sequences, maxlen=None, dtype='int32',
       raise ValueError(f'Padding type "{padding}" not understood')
   return x
 
-#import numpy as np
 class Tokenizer(object):
   """Text tokenization utility class.
   Deprecated: `tf.keras.preprocessing.text.Tokenizer` does not operate on
@@ -477,16 +483,71 @@ class Tokenizer(object):
     config = self.get_config()
     tokenizer_config = {'class_name': self.__class__.__name__, 'config': config}
     return json.dumps(tokenizer_config, **kwargs)
-    
 
-import torch
-from torch import nn
-import math
+
+class CustomRNN(nn.Module):
+    """
+    Referencia:
+    http://karpathy.github.io/2015/05/21/rnn-effectiveness/
+    """
+    def __init__(self, input_size, hidden_size, activation=nn.Tanh()):
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        
+        #i_t (input gate)
+        self.W_i = nn.Parameter(torch.Tensor(self.input_size, self.hidden_size))
+        self.U_i = nn.Parameter(torch.Tensor(self.hidden_size, self.hidden_size))
+        self.b_i = nn.Parameter(torch.Tensor(self.hidden_size))
+        
+        self.activation = activation
+
+        self.init_weights()
+
+    def init_weights(self):
+        '''
+        Inicializar de forma random los pesos
+        '''
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, x, init_states=None):
+        '''
+        Esta función trabaja por defecto como si batch_first=True
+        '''
+        bs, seq_sz, _ = x.size()
+        hidden_seq = []
+
+        if init_states is None:
+            h_t = torch.zeros(bs, self.hidden_size).to(x.device)
+        else:
+            h_t = init_states
+
+        for t in range(seq_sz):
+            x_t = x[:, t, :]
+            h_t = self.activation(x_t @ self.W_i + h_t @ self.U_i + self.b_i)
+            hidden_seq.append(h_t.unsqueeze(0))
+
+        # reshape hidden_seq for return
+        hidden_seq = torch.cat(hidden_seq, dim=0)
+        hidden_seq = hidden_seq.transpose(0, 1).contiguous()
+        return hidden_seq, h_t
+
 
 class CustomLSTM(nn.Module):
     """
     Referencia:
     https://www.youtube.com/watch?v=yMyBd7iNKho
+
+    Implementaciones similares:
+    https://stackoverflow.com/questions/49040180/change-tanh-activation-in-lstm-to-relu
+    https://theaisummer.com/understanding-lstm/
+    https://medium.com/huggingface/understanding-emotions-from-keras-to-pytorch-3ccb61d5a983    
+
+    NOTA: La LSTM origianl de pytorch posee un bias adicional "V_f"
+    por lo que notará diferencia entre la cantidad de "W" entre esta implementación clásica
+    y la de pytoch. Esta implementación es fiel al paper original y a Tensorflow.
 
     """
     def __init__(self, input_size, hidden_size, activation=nn.Tanh(), recurrent_activation=nn.Sigmoid()):
