@@ -15,6 +15,6 @@ Preguntas interesantes:
 - Do you have any pet?
 - Where are you from?
 
-__IMPORTANTE__: Recuerde que lo para la entrega del ejercicio debe quedar registrado en el colab las preguntas y las respuestas del BOT para que podamos evaluar el desempeño final.
+__IMPORTANTE__: Recuerde para la entrega del ejercicio debe quedar registrado en el colab las preguntas y las respuestas del BOT para que podamos evaluar el desempeño final.
 
 
