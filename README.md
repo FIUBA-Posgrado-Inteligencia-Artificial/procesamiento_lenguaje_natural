@@ -42,5 +42,5 @@ Este repositorio contiene el material de clases (presentaciones, ejercicios y no
 * Docker y Tensorflow Serving (TFX)
 
 # Profesores
-:octocat: Msc. Rodrigo Cardenas Szigety\
+:octocat: Dr. Rodrigo Cardenas Szigety\
 :octocat: Esp. Ing. Hernán Contigiani
