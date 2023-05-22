@@ -4,17 +4,17 @@ Este repositorio contiene el material de clases (presentaciones, ejercicios y no
 ## Contenido
 
 ### [Clase 1](clase_1/README.md) 
-* Introducción a NLP (natural language programing)
+* Introducción a NLP (Natural Language Processing)
 * Vectorización de documentos
 
 ### [Clase 2](clase_2/README.md)
 * Preprocesamiento de texto
-* Librerías de NLP
-* Rule-based bots
+* Librerías de preprocesamiento para NLP
+* Information-retrieval bots
 
 ### [Clase 3](clase_3/README.md)
 * Word embeddings, CBOW y SkipGRAM
-* Representación de oraciones
+* Representación de palabras
 
 ### [Clase 4](clase_4/README.md)
 * Redes recurrentes (RNN)
@@ -23,7 +23,7 @@ Este repositorio contiene el material de clases (presentaciones, ejercicios y no
 
 ### [Clase 5](clase_5/README.md)
 * Redes LSTM
-* Análisis de sentimientos (sentiment analysis)
+* Análisis de sentimiento (sentiment analysis)
     
 ### [Clase 6](clase_6/README.md)
 * Modelos Seq2Seq
