@@ -1,0 +1,10 @@
+numpy>=1.23.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+tensorflow>=2.12.0
+keras>=2.12.0
+scikit-learn>=1.2.0
+nltk>=3.8.0
+spacy>=3.6.0
+gensim>=4.3.0
+transformers>=4.32.0
