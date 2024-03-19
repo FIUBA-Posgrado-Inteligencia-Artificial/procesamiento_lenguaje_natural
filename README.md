@@ -1,46 +1,24 @@
-# Procesamiento del Lenguaje natural
-Este repositorio contiene el material de clases (presentaciones, ejercicios y notebooks) para NLP (CEIA - FIUBA)
+# Procesamiento de lenguaje natural
 
-## Contenido
+## Localizacion de los desafíos
 
-### [Clase 1](clase_1/README.md) 
-* Introducción a NLP (Natural Language Processing)
-* Vectorización de documentos
+- TO BE DEFINED
+- TO BE DEFINED
+- TO BE DEFINED
 
-### [Clase 2](clase_2/README.md)
-* Preprocesamiento de texto
-* Librerías de preprocesamiento para NLP
-* Information-retrieval bots
+En este directorio también se encuentra la carpeta `src` con el código implementado para la realización de los tres tps.
 
-### [Clase 3](clase_3/README.md)
-* Word embeddings, CBOW y SkipGRAM
-* Representación de palabras
+# Como ejecutar el repositorio:
+NOTA: La versión de Python utilizada es la 3.10.0.
+La notación de los comandos puede variar ligeramente dependiendo del sistema operativo y de la versión de python que se esté utilizando.
 
-### [Clase 4](clase_4/README.md)
-* Redes recurrentes (RNN)
-* Problemas de secuencia
-* Estimación de próxima palabra
+En el directorio principal escribir los siguientes comandos:
+- ``py -m venv .env``
+- ``.\.env\Scripts\activate``
+- ``py -m pip install --upgrade pip``
+- ``pip install -r .\requirements.txt``
 
-### [Clase 5](clase_5/README.md)
-* Redes LSTM
-* Análisis de sentimiento (sentiment analysis)
-    
-### [Clase 6](clase_6/README.md)
-* Modelos Seq2Seq
-* Bots conversacionales y traductores
-
-### [Clase 7](clase_7/README.md)
-* Celdas con Attention
-* Transformers
-* BERT y ELMo
-* Fine tuning
-
-### [Clase 8](clase_8/README.md)
-* Cierre del curso
-* Deployment de servicio NLP
-* Flask, APIs
-* Docker y Tensorflow Serving (TFX)
-
-# Profesores
-:octocat: Dr. Rodrigo Cardenas Szigety\
-:octocat: Esp. Ing. Hernán Contigiani
+Una vez instaladas todas las dependencias, realizar los siguientes pasos:
+- Abrir los documentos ``TO``, ``BE`` y ``DEFINED``
+- Dentro del notebook seleccionar el kernel de ``.env``
+- Ejecutar celdas secuencialmente
