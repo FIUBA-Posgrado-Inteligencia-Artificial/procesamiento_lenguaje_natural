@@ -3,3 +3,5 @@
 desafios/desafio_2/songs_dataset/
 desafios/desafio_2/labels.tsv
 desafios/desafio_2/vectors.tsv
+desafios/desafio_2/Corona_NLP_test.csv
+desafios/desafio_2/Corona_NLP_train.csv
