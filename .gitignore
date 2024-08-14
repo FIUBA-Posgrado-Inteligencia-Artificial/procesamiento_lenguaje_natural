@@ -1,2 +1,5 @@
 **.ipynb_checkpoints
 .env/
+desafios/desafio_2/songs_dataset/
+desafios/desafio_2/labels.tsv
+desafios/desafio_2/vectors.tsv
