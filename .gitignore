@@ -8,3 +8,5 @@ desafios/desafio_2/Corona_NLP_test.csv
 desafios/desafio_2/Corona_NLP_train.csv
 desafios/desafio_3/email_spam.csv
 desafios/desafio_4/gloveembedding.pkl
+desafios/desafio_5/bert_weights.h5
+desafios/desafio_5/original_weights.h5
