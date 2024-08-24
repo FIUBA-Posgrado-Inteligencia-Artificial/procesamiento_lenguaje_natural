@@ -7,7 +7,7 @@
 - Desafío 3.word: [Link](https://github.com/gmvtrmaga/procesamiento_lenguaje_natural/blob/main/desafios/desafio_3/Desafio_3_word.ipynb)
 - Desafío 3.char: [Link](https://github.com/gmvtrmaga/procesamiento_lenguaje_natural/blob/main/desafios/desafio_3/Desafio_3_char.ipynb)
 - Desafío 4: [Link](https://github.com/gmvtrmaga/procesamiento_lenguaje_natural/blob/main/desafios/desafio_4/Desafio_4.ipynb)
-- Desafío 5: [Link](https://github.com/gmvtrmaga/procesamiento_lenguaje_natural/tree/main/desafios/desafio_5)
+- Desafío 5: [Link](https://github.com/gmvtrmaga/procesamiento_lenguaje_natural/blob/main/desafios/desafio_5/Desafio_5.ipynb)
 
 # Como ejecutar el repositorio:
 NOTA: La versión de Python utilizada es la 3.10.0.
