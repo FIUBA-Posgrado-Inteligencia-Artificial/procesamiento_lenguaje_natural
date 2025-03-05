@@ -43,4 +43,5 @@ Este repositorio contiene el material de clases (presentaciones, ejercicios y no
 
 # Profesores
 :octocat: Dr. Rodrigo Cardenas Szigety (2022-actual)\
+:octocat: Dr. Nicolás Vattuone (2025-actual)\
 :octocat: Esp. Ing. Hernán Contigiani (2021-2022)
