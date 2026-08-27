@@ -23,7 +23,7 @@ Este repositorio contiene el material de clases (presentaciones, ejercicios y no
 
 ### [Clase 5]
 * CNN para NLP
-* Declaración Funcional para armado de Redes Neuronales 
+* API Funcional para Arquitecturas Complejas
     
 ### [Clase 6]
 * Modelos Seq2Seq
