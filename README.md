@@ -22,24 +22,26 @@ Este repositorio contiene el material de clases (presentaciones, ejercicios y no
 * Estimación de próxima palabra
 
 ### [Clase 5]
-* Redes LSTM
-* Análisis de sentimiento (sentiment analysis)
+* CNN para NLP
+* Declaración Funcional para armado de Redes Neuronales 
     
 ### [Clase 6]
 * Modelos Seq2Seq
-* Bots conversacionales y traductores
+* Teacher Forcing
+* Aplicaciones
+* Limitaciones
 
 ### [Clase 7]
-* Celdas con Attention
+* Mecanismo de Atención
 * Transformers
-* BERT y ELMo
-* Fine tuning
+* Pre-training
+* Large Language Models
 
 ### [Clase 8]
+* Post-training
+* Fine-tuning
+* RAG
 * Cierre del curso
-* Deployment de servicio NLP
-* Flask, APIs
-* Docker y Tensorflow Serving (TFX)
 
 # Profesores
 :octocat: Josselyn Ordóñez
