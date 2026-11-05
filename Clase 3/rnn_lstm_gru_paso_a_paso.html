@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RNN, LSTM y GRU paso a paso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Idea de diseño: cuaderno de laboratorio luminoso para proyectar. Cada compuerta tiene un color fijo en toda la página;
+   los vectores son columnas de 4 celdas (azul = negativo, naranja = positivo). */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#172031; --muted:#596379; --line:#d8dde6; --wire:#8a93a6;
+  --accent:#2f45c4; --accent-soft:#e7eafb;
+  --pos:#e06a22; --neg:#2878b5; --cell0:#eceff3; --xc:#0f7f6e;
+  --gf:#d1453b; --gi:#2c9358; --gg:#c08410; --go:#7646c6; --gz:#12899a; --gr:#c23d7c;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f131a; --surface:#171c26; --ink:#e6e9f0; --muted:#9ba4b5; --line:#2b3242; --wire:#6d7689;
+    --accent:#8c9cff; --accent-soft:#222a4d;
+    --pos:#f28a45; --neg:#4ea2e0; --cell0:#262c38; --xc:#3cc2ab;
+    --gf:#ee6a5f; --gi:#4cbb7a; --gg:#e0a63a; --go:#a07ce8; --gz:#33b4c4; --gr:#e467a2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f131a; --surface:#171c26; --ink:#e6e9f0; --muted:#9ba4b5; --line:#2b3242; --wire:#6d7689;
+  --accent:#8c9cff; --accent-soft:#222a4d;
+  --pos:#f28a45; --neg:#4ea2e0; --cell0:#262c38; --xc:#3cc2ab;
+  --gf:#ee6a5f; --gi:#4cbb7a; --gg:#e0a63a; --go:#a07ce8; --gz:#33b4c4; --gr:#e467a2;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4vw,44px);letter-spacing:-.01em}
+h2{font-size:clamp(22px,2.6vw,30px)}
+h3{font-size:18px}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* ---------- cabecera ---------- */
+.top{padding:28px 0 18px}
+.eyebrow{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.lede{color:var(--muted);max-width:68ch;margin-top:8px;font-size:18px}
+.sentence{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px;align-items:center}
+.tok{font-family:var(--mono);font-size:15px;padding:4px 9px;border-radius:7px;background:var(--surface);border:1px solid var(--line)}
+.tok.key{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.tok.blank{border:2px dashed var(--accent);color:var(--accent);font-weight:600}
+.dist{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--muted);font-size:15px}
+.dist .bar{flex:0 1 420px;height:2px;background:linear-gradient(90deg,var(--accent),var(--line))}
+.dims2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,4fr);gap:12px;margin-top:18px}
+@media (max-width:860px){.dims2{grid-template-columns:1fr}}
+.dgroup{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.dgroup h3{font-size:16px;margin-bottom:8px}
+.dlist{display:grid;gap:6px}
+.dlist div{display:grid;grid-template-columns:165px 1fr;gap:8px;font-size:15px;align-items:baseline}
+.dlist b{font-family:var(--mono);font-size:13.5px}
+.dgroup.x b{color:var(--xc)} .dgroup.h b{color:var(--accent)}
+.hypo{margin-top:12px;border-left:4px solid var(--gg);background:color-mix(in srgb,var(--gg) 12%,var(--surface));padding:10px 14px;border-radius:0 10px 10px 0;font-size:15.5px;max-width:110ch}
+.dim{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px}
+.dim b{font-family:var(--mono);font-size:13px;color:var(--accent)}
+.note{margin-top:12px;font-size:15px;color:var(--muted)}
+.note summary{cursor:pointer;color:var(--ink);font-weight:600}
+.note p{margin-top:6px;max-width:80ch}
+
+/* ---------- pestañas ---------- */
+.tabsbar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.tabsbar .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+.tab{border:1px solid transparent;background:none;padding:7px 14px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--muted)}
+.tab:hover{color:var(--ink);background:var(--surface)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.switch{display:flex;align-items:center;gap:8px;font-size:15px;cursor:pointer;user-select:none}
+.switch input{width:38px;height:22px;appearance:none;background:var(--line);border-radius:999px;position:relative;cursor:pointer;transition:background .2s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:left .2s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{left:19px}
+
+/* ---------- secciones ---------- */
+main{padding:22px 0 60px}
+section[data-tab]{display:none}
+section[data-tab].active{display:block}
+.sec-head{display:grid;gap:8px;margin-bottom:16px;max-width:90ch}
+.sec-head p{color:var(--muted)}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 10px 10px 0;font-size:16px;max-width:90ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h3{margin-bottom:8px}
+.grid-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start;margin-top:14px}
+.stack{display:grid;gap:14px}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+@media (max-width:980px){.grid-main,.grid-2{grid-template-columns:1fr}}
+.scroll{overflow-x:auto}
+.diagram svg{display:block;width:100%;max-width:1150px;margin:0 auto;min-width:720px;height:auto}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+
+/* ---------- stepper ---------- */
+.stepper{margin-bottom:14px}
+.controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:15px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.status{margin-left:auto;font-size:15px;color:var(--muted)}
+.status b{color:var(--ink)}
+.timeline{display:flex;gap:4px;overflow-x:auto;padding:4px 2px 8px}
+.chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px 6px;border-radius:9px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-width:46px}
+.chip .w{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.chip.key .w{color:var(--accent);font-weight:600}
+.chip.cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.chip.future{opacity:.55}
+.chip.blank{border:2px dashed var(--accent)}
+.mini{display:flex;gap:3px}
+.mini .col{display:flex;flex-direction:column;gap:1px;align-items:center}
+.mini .col i{display:block;width:12px;height:8px;border-radius:2px}
+.mini .col span{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1}
+
+/* ---------- SVG ---------- */
+svg text{font-family:var(--body);fill:var(--ink)}
+svg .lbl{font-size:15px;font-weight:600}
+svg .rowlbl{font-size:11.5px;fill:var(--muted)}
+svg .sublbl{font-size:12.5px;fill:var(--muted)}
+svg .num{font-family:var(--mono);font-size:9px;font-weight:600}
+svg .wire{fill:none;stroke:var(--wire);stroke-width:2}
+svg .wire.cur{stroke:var(--accent);stroke-width:2.6;stroke-dasharray:7 5;animation:march .7s linear infinite}
+svg .belt{fill:none;stroke:var(--ink);stroke-width:3.5;opacity:.75}
+svg .fut{opacity:.16}
+svg .halo{fill:none;stroke:var(--accent);stroke-width:2.5;rx:6}
+svg .node{fill:var(--surface);stroke:var(--ink);stroke-width:2}
+svg .nodesym{font-size:17px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+svg .boxtxt{font-size:16px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+svg .g-cur .boxrect{stroke-width:3.5}
+@keyframes march{to{stroke-dashoffset:-24}}
+@media (prefers-reduced-motion: reduce){svg .wire.cur{animation:none;stroke-dasharray:none}}
+
+/* ---------- fórmulas ---------- */
+.formulas{display:grid;gap:6px}
+.frow{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:8px;border-radius:10px;border:1px solid transparent;transition:background .2s}
+.frow .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--cell0);color:var(--muted)}
+.frow.cur{background:var(--accent-soft);border-color:var(--accent)}
+.frow.cur .n{background:var(--accent);color:#fff}
+.frow.fut{opacity:.45}
+.frow .eq{font-family:var(--mono);font-size:14.5px;line-height:1.6}
+.frow .eq sub{font-size:.75em}
+.frow .what{font-size:14.5px;color:var(--muted)}
+.vals{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;align-items:center}
+.vchip{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:18px;padding:0 4px;border-radius:4px;font-family:var(--mono);font-size:11.5px;font-weight:600}
+.vals .eqsign{font-family:var(--mono);font-size:12px;color:var(--muted);margin:0 3px}
+.reading{margin-top:12px;padding:12px;border-radius:10px;background:var(--bg);font-size:15.5px}
+.reading h4{margin:0 0 4px;font-size:13px;font-family:var(--mono);color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+.memtab{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px;font-variant-numeric:tabular-nums}
+.memtab td,.memtab th{padding:3px 6px;text-align:right;border-bottom:1px solid var(--line)}
+.memtab th:first-child,.memtab td:first-child{text-align:left}
+.memtab th{font-weight:600;color:var(--muted);font-size:13px}
+.up{color:var(--pos);font-weight:700}.down{color:var(--neg);font-weight:700}
+
+/* ---------- predicción ---------- */
+.pred{display:grid;gap:7px}
+.prow{display:grid;grid-template-columns:86px 1fr 52px;gap:10px;align-items:center;font-size:15.5px}
+.prow .word{font-family:var(--mono);font-size:14.5px}
+.prow .track{height:20px;background:var(--cell0);border-radius:6px;overflow:hidden}
+.prow .fill{height:100%;background:var(--wire);border-radius:6px;transition:width .35s}
+.prow.target .fill{background:var(--accent)}
+.prow.target .word{color:var(--accent);font-weight:700}
+.prow .pct{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.pred-cap{font-size:14.5px;color:var(--muted);margin-bottom:10px}
+
+/* ---------- gráficos ---------- */
+.chart svg{display:block;width:100%;height:auto}
+.chart .axis{stroke:var(--line)}
+.chart .grid{stroke:var(--line);stroke-dasharray:2 4}
+.chart text{font-size:11.5px;fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;margin:6px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:16px;height:4px;border-radius:2px;display:inline-block}
+.slider{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:10px 0 4px;font-size:15px}
+.slider input{width:100%;accent-color:var(--accent)}
+.slider output{font-family:var(--mono);font-weight:600;min-width:52px;text-align:right}
+
+/* ---------- pesos ---------- */
+details.weights{margin-top:14px}
+details.weights summary{cursor:pointer;font-weight:700;font-family:var(--display);font-size:18px}
+.mats{display:flex;flex-wrap:wrap;gap:18px;margin-top:12px}
+.mat{display:grid;gap:4px}
+.mat .t{font-family:var(--mono);font-size:13px;font-weight:600}
+.mat table{border-collapse:separate;border-spacing:2px}
+.mat td{width:40px;height:24px;text-align:center;font-family:var(--mono);font-size:11px;border-radius:4px;font-weight:600}
+.gatehead{font-weight:700;margin-top:6px}
+
+/* ---------- parámetros ---------- */
+.pcontrols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end}
+.field{display:grid;gap:4px;font-size:15px}
+.field label{font-weight:600}
+.field .row{display:flex;gap:8px;align-items:center}
+.field input[type=range]{flex:1;accent-color:var(--accent)}
+.field input[type=number],.field select{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.field input[type=number].narrow{width:84px}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.pcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+@media (max-width:1100px){.pcards{grid-template-columns:1fr}}
+.pcard .total{font-family:var(--display);font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+.pcard .calc{font-family:var(--mono);font-size:13.5px;background:var(--bg);border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.7;overflow-x:auto;white-space:nowrap}
+.pcard svg{display:block;width:100%;height:auto;margin-top:8px}
+.pcard svg text{font-size:11px;fill:var(--muted)}
+.why{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:14px}
+@media (max-width:980px){.why{grid-template-columns:1fr}}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15.5px}
+.tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl thead th{color:var(--muted);font-weight:600;font-size:14px}
+.tbl.txt th,.tbl.txt td{text-align:left}
+.tbl tfoot td{font-weight:700;border-bottom:none}
+.share{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:4px;min-width:90px}
+.code{font-family:var(--mono);font-size:13.5px;background:var(--bg);border-radius:10px;padding:12px;overflow-x:auto;white-space:pre;line-height:1.55;margin-top:8px}
+
+/* ---------- comparación ---------- */
+.heat{border-collapse:separate;border-spacing:2px;font-size:13px}
+.heat th{font-family:var(--mono);font-weight:400;font-size:11.5px;color:var(--muted);padding:0 2px;white-space:nowrap}
+.heat thead th{writing-mode:vertical-rl;transform:rotate(180deg);height:92px;text-align:left}
+.heat thead th.key{color:var(--accent);font-weight:600}
+.heat td{width:34px;height:30px;border-radius:4px;text-align:center;font-family:var(--mono);font-size:10px;font-weight:600}
+.heat tbody th{text-align:right;padding-right:8px;font-family:var(--body);font-size:14px;color:var(--ink);font-weight:600}
+.final{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.final{grid-template-columns:1fr}}
+.fbox{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}
+.fbox .big{font-family:var(--display);font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
+.fbox .lab{font-weight:700}
+footer{color:var(--muted);font-size:14px;padding:20px 0 40px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="eyebrow">PLN · Redes neuronales recurrentes</p>
+    <h1>RNN, LSTM y GRU paso a paso</h1>
+    <p class="lede">La red lee la oración palabra por palabra y, al final, tiene que predecir la palabra que falta. La pista clave aparece 17 palabras antes.</p>
+    <div class="sentence" id="sentence"></div>
+    <div class="dist"><span>«Francia»</span><span class="bar" aria-hidden="true"></span><span>17 pasos de tiempo</span><span class="bar" aria-hidden="true"></span><span>«___»</span></div>
+    <div class="dims2" id="dims"></div>
+    <details class="note">
+      <summary>Sobre este ejemplo</summary>
+      <p>Para que se pueda seguir a mano, el modelo es de juguete: embeddings de <b>3</b> dimensiones (d<sub>x</sub> = 3) y estado oculto de <b>4</b> dimensiones (d<sub>h</sub> = 4). Por eso W<sub>x</sub> es de 4×3 y W<sub>h</sub> de 4×4. Los pesos están elegidos a mano; en una red real se aprenden con backpropagation, pero las operaciones son exactamente estas. Todos los números de la página se calculan en vivo con esos pesos.</p>
+    </details>
+  </div>
+</header>
+
+<div class="tabsbar">
+  <div class="wrap">
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-go="elman">1 · Elman</button>
+      <button class="tab" role="tab" data-go="lstm">2 · LSTM</button>
+      <button class="tab" role="tab" data-go="gru">3 · GRU</button>
+      <button class="tab" role="tab" data-go="parametros">4 · Parámetros</button>
+      <button class="tab" role="tab" data-go="comparacion">5 · Comparación</button>
+    </div>
+    <label class="switch" for="nums"><input type="checkbox" id="nums"> Mostrar números</label>
+  </div>
+</div>
+
+<main class="wrap">
+
+<!-- ================= ELMAN ================= -->
+<section data-tab="elman" id="sec-elman">
+  <div class="sec-head">
+    <h2>1 · Celda de Elman (RNN simple)</h2>
+    <p>En cada paso la red combina la palabra actual con su memoria anterior y produce una memoria nueva. Esa memoria es un único vector <b>h<sub>t</sub></b>, que se reescribe entero en cada paso.</p>
+  </div>
+  <div class="stepper" id="st-elman"></div>
+  <div class="card diagram"><div class="scroll"><svg id="svg-elman" viewBox="0 0 900 375" role="img" aria-label="Diagrama de la celda de Elman"></svg></div></div>
+  <div class="grid-main">
+    <div class="card"><h3>Cálculo de este paso</h3><div id="f-elman"></div></div>
+    <div class="stack">
+    <div class="card"><h3>¿Qué palabra viene después?</h3><div id="p-elman"></div></div>
+    <div class="card">
+      <h3>¿Cuánto queda de «Francia»?</h3>
+      <p class="small muted">Valor de la dimensión <b>h₁</b> (país) de h<sub>t</sub> en cada paso. Mueve el peso recurrente para ver qué pasa.</p>
+      <div class="slider"><label for="wh">W<sub>h</sub>[h₁, h₁]</label><input type="range" id="wh" min="0.2" max="1.6" step="0.05" value="0.45"><output id="whout">0.45</output></div>
+      <div class="chart" id="c-elman-mem"></div>
+    </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Gradiente que se desvanece</h3>
+    <p class="small muted" style="max-width:80ch">Para aprender que «Francia» importa, el error del final tiene que viajar hacia atrás hasta el paso 3. En cada paso se multiplica por <span class="mono">diag(1 − h<sub>t</sub>²)·W<sub>h</sub></span>. Si esos factores son menores que 1, la señal se encoge de forma exponencial. Escala logarítmica.</p>
+    <div class="chart" id="c-elman-grad"></div>
+    <p class="small" id="grad-text" style="margin-top:6px"></p>
+  </div>
+  <details class="card weights" id="w-elman"><summary>Ver los pesos de este modelo de juguete</summary><div class="mats" id="m-elman"></div></details>
+</section>
+
+<!-- ================= LSTM ================= -->
+<section data-tab="lstm" id="sec-lstm">
+  <div class="sec-head">
+    <h2>2 · LSTM: una celda con 4 compuertas</h2>
+    <p>La LSTM agrega una segunda memoria, el <b>estado de celda C<sub>t</sub></b>, que funciona como una cinta transportadora. La información viaja por la cinta y solo se modifica con dos operaciones suaves: multiplicar por la compuerta de olvido y sumar lo nuevo.</p>
+    <div class="callout">Las «4 celdas» son en realidad <b>una sola celda con 4 capas internas</b>: tres compuertas sigmoides (olvido <b>f</b>, entrada <b>i</b>, salida <b>o</b>) y un candidato tanh (<b>g</b>, también escrito C̃<sub>t</sub>). Cada una tiene sus propios W, U y b: por eso la LSTM tiene 4 veces los parámetros de Elman.</div>
+  </div>
+  <div class="stepper" id="st-lstm"></div>
+  <div class="card diagram"><div class="scroll"><svg id="svg-lstm" viewBox="0 0 940 440" role="img" aria-label="Diagrama de la celda LSTM"></svg></div></div>
+  <div class="grid-main">
+    <div class="card"><h3>Cálculo de este paso</h3><div id="f-lstm"></div></div>
+    <div class="stack">
+    <div class="card"><h3>¿Qué palabra viene después?</h3><div id="p-lstm"></div></div>
+    <div class="card">
+      <h3>Memoria guardada vs. memoria mostrada</h3>
+      <p class="small muted">Dimensión <b>h₁</b> (país). C<sub>t</sub> guarda «Francia» casi intacto; h<sub>t</sub> lo muestra cuando la compuerta de salida se abre (después de «comunicarme»).</p>
+      <div class="chart" id="c-lstm-mem"></div>
+    </div>
+    </div>
+  </div>
+  <details class="card weights" id="w-lstm"><summary>Ver los pesos de este modelo de juguete</summary><div id="m-lstm"></div></details>
+</section>
+
+<!-- ================= GRU ================= -->
+<section data-tab="gru" id="sec-gru">
+  <div class="sec-head">
+    <h2>3 · GRU: dos compuertas, una sola memoria</h2>
+    <p>La GRU simplifica la LSTM: no tiene estado de celda aparte y usa dos compuertas. La de <b>actualización z</b> hace a la vez el trabajo de olvidar y de escribir; la de <b>reinicio r</b> decide cuánto pasado usar para calcular el candidato.</p>
+    <div class="callout">Convención usada: <span class="mono">h<sub>t</sub> = z<sub>t</sub> ⊙ h<sub>t−1</sub> + (1 − z<sub>t</sub>) ⊙ h̃<sub>t</sub></span>, como en PyTorch y Keras (z ≈ 1 conserva). Algunos libros intercambian z y 1 − z; el mecanismo es el mismo.</div>
+  </div>
+  <div class="stepper" id="st-gru"></div>
+  <div class="card diagram"><div class="scroll"><svg id="svg-gru" viewBox="0 0 940 440" role="img" aria-label="Diagrama de la celda GRU"></svg></div></div>
+  <div class="grid-main">
+    <div class="card"><h3>Cálculo de este paso</h3><div id="f-gru"></div></div>
+    <div class="stack">
+    <div class="card"><h3>¿Qué palabra viene después?</h3><div id="p-gru"></div></div>
+    <div class="card">
+      <h3>La compuerta z decide cuándo escribir</h3>
+      <p class="small muted">Dimensión 1 (país). z cae casi a 0 solo en «Francia» (escribe) y se queda cerca de 1 el resto del tiempo (conserva).</p>
+      <div class="chart" id="c-gru-mem"></div>
+    </div>
+    </div>
+  </div>
+  <details class="card weights" id="w-gru"><summary>Ver los pesos de este modelo de juguete</summary><div id="m-gru"></div></details>
+</section>
+
+<!-- ================= PARÁMETROS ================= -->
+<section data-tab="parametros" id="sec-parametros">
+  <div class="sec-head">
+    <h2>4 · ¿De dónde salen los parámetros?</h2>
+    <p>Cada bloque de una celda recurrente tiene tres piezas: una matriz para la entrada x<sub>t</sub>, una matriz para la memoria h<sub>t−1</sub> y un vector de bias. Elman tiene 1 bloque, la GRU 3 y la LSTM 4.</p>
+  </div>
+  <div class="card">
+    <div class="pcontrols">
+      <div class="field"><label for="dx">d<sub>x</sub> · tamaño del embedding</label><div class="row"><input type="range" id="dx" min="2" max="300" value="30"><input type="number" class="narrow" id="dxn" min="1" max="2048" value="30"></div></div>
+      <div class="field"><label for="dh">d<sub>h</sub> · tamaño del estado oculto</label><div class="row"><input type="range" id="dh" min="2" max="512" value="64"><input type="number" class="narrow" id="dhn" min="1" max="4096" value="64"></div></div>
+      <div class="field"><label for="vocab">V · tamaño del vocabulario</label><input type="number" id="vocab" min="2" max="500000" value="10000"></div>
+      <div class="field"><label for="conv">Cómo se cuentan los bias</label><select id="conv"><option value="clase">Fórmula de clase (1 bias)</option><option value="keras">Keras</option><option value="torch">PyTorch</option></select></div>
+    </div>
+    <div class="presets" style="margin-top:12px"><span class="small muted" style="align-self:center">Ejemplos:</span><button class="btn" data-preset="30,64">30 → 64</button><button class="btn" data-preset="3,4">Modelo de juguete (3 → 4)</button><button class="btn" data-preset="300,256">300 → 256</button></div>
+  </div>
+  <div class="pcards" id="pcards"></div>
+  <div class="why">
+    <div class="card">
+      <h3>Una fila = una neurona</h3>
+      <p id="neuron-text" style="margin-top:4px"></p>
+      <div id="neuron-svg" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h3>¿Por qué cambian los bias según la librería?</h3>
+      <p class="small" style="margin-top:4px">En la fórmula de clase hay un bias por bloque. <b>PyTorch</b> guarda dos (<span class="mono">b_ih</span> y <span class="mono">b_hh</span>) en todas las celdas: matemáticamente se suman y son redundantes, pero cuentan como parámetros. <b>Keras</b> usa un bias en SimpleRNN y LSTM, y dos en GRU porque por defecto (<span class="mono">reset_after=True</span>) aplica r después de multiplicar: <span class="mono">r ⊙ (U<sub>h</sub>h<sub>t−1</sub> + b<sub>h2</sub>)</span>, y ahí el segundo bias ya no es redundante.</p>
+      <div class="code" id="code"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>El modelo completo de predicción de palabras</h3>
+    <p class="small muted" style="max-width:85ch">Embedding (V × d<sub>x</sub>) → capa recurrente → capa densa de salida (d<sub>h</sub> × V + V) con softmax sobre el vocabulario. Con vocabularios grandes, la capa recurrente suele ser la parte más chica.</p>
+    <div class="scroll"><table class="tbl" id="fulltbl" style="margin-top:8px"></table></div>
+  </div>
+</section>
+
+<!-- ================= COMPARACIÓN ================= -->
+<section data-tab="comparacion" id="sec-comparacion">
+  <div class="sec-head">
+    <h2>5 · Las tres celdas con la misma oración</h2>
+    <p>Mismos embeddings, misma capa de salida, misma oración. Solo cambia la celda recurrente.</p>
+  </div>
+  <div class="card"><h3>Probabilidad de «francés» al final de la oración</h3><div class="final" id="final"></div></div>
+  <div class="card" style="margin-top:14px">
+    <h3>La dimensión 1 («país») a lo largo de la oración</h3>
+    <div class="scroll"><table class="heat" id="heat"></table></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>¿Cuánta señal de «Francia» sobrevive en el camino de memoria?</h3>
+    <p class="small muted" style="max-width:85ch">Elman: norma de ∂h<sub>t</sub>/∂h<sub>Francia</sub>. LSTM: producto de las compuertas de olvido f₁ (camino directo por C). GRU: producto de z₁ (camino directo por h). Escala logarítmica.</p>
+    <div class="chart" id="c-cmp"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Resumen</h3>
+    <div class="scroll"><table class="tbl txt" id="summary"></table></div>
+  </div>
+</section>
+
+</main>
+<footer class="wrap">Teclado: → siguiente operación · Shift + → siguiente palabra · ← palabra anterior · Espacio reproducir/pausar.</footer>
+
+<script>
+// ===== Modelo de juguete: pesos elegidos a mano para que cada dimensión sea interpretable =====
+const TOKENS = ["Vivo","en","Francia","desde","hace","6","meses","pero","aún","me","cuesta","comunicarme","porque","antes","de","mudarme","no","sabía","nada","de"];
+// embedding de 3 dimensiones (x1, x2, x3); valores densos y pequeños salvo en las palabras clave
+const EMB = [
+  [0.15,0.05,-0.1],[0.05,-0.1,0.05],[1.0,0.1,-0.05],[-0.05,0.0,0.1],[0.0,-0.1,-0.05],
+  [-0.1,0.05,0.0],[0.05,0.0,-0.1],[-0.05,0.0,0.3],[0.0,0.05,0.25],[0.0,0.1,0.0],
+  [-0.05,0.35,0.45],[0.0,1.0,0.0],[0.05,-0.05,0.1],[0.0,0.0,0.05],[0.05,0.0,0.0],
+  [0.3,0.0,0.0],[0.0,0.0,1.0],[0.0,0.5,0.3],[0.0,0.0,0.8],[0.05,0.0,0.0]
+];
+const CANDS = ["francés","inglés","español","cocina","historia"];
+
+const sig = z => 1/(1+Math.exp(-z));
+const tanh = Math.tanh;
+const mv = (M,v) => M.map(r => r.reduce((s,w,j)=>s+w*v[j],0));
+const add = (...vs) => vs[0].map((_,i)=>vs.reduce((s,v)=>s+v[i],0));
+const mul = (a,b) => a.map((x,i)=>x*b[i]);
+
+const P = {
+  elman: {
+    Wx: [[2.2,0,0],[0,2.0,0.2],[0,0,2.0],[0.8,-0.9,0.7]],
+    Wh: [[0.45,0,0,-0.15],[0,0.55,0.1,0],[0,0,0.5,0.1],[0.1,0.1,0,0.3]],
+    b:  [0,-0.1,-0.1,0.1]
+  },
+  lstm: {
+    f: { W:[[0,0,0],[0,0,0],[0,0,-1],[0.5,0,0]], U:[[0,0,0,0],[0,0.3,0,0],[0,0,0,0],[0,0,0,0]], b:[4,1.8,0.6,-0.6] },
+    i: { W:[[5,0,0],[0,4,0],[0,0,4],[0.5,0.5,0.5]], U:[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], b:[-3,-2,-2,0] },
+    g: { W:[[2.5,0,0],[0,2.5,0.3],[0,0,2.5],[0.8,-0.9,0.7]], U:[[0.2,0,0,0],[0,0.2,0,0],[0,0,0.2,0],[0,0,0,0.2]], b:[0,0,0,0.1] },
+    o: { W:[[0,2.5,0],[0,1,0],[0,0,0],[0,0,0]], U:[[0,3.5,1,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], b:[-0.5,0.5,0.5,0.5] }
+  },
+  gru: {
+    z: { W:[[-7,0,0],[0,-5,0],[0,0,-5],[0,0,0]], U:[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], b:[3.5,2,1.5,-0.5] },
+    r: { W:[[0,0,0],[0,0,0],[0,0,0],[1,0,0.5]], U:[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], b:[2,2,2,-0.5] },
+    n: { W:[[2.5,0,0],[0,2.5,0.3],[0,0,2.5],[0.8,-0.9,0.7]], U:[[0.2,0,0,0],[0,0.2,0,0],[0,0,0.2,0],[0,0,0,0.4]], b:[0,0,0,0.1] }
+  },
+  out: {
+    V: [[3.2,1.6,0.3,0],[-0.6,1.6,0.3,0],[-1.2,1.3,0.3,0],[1.6,-1.2,0.2,0.2],[0.3,-0.9,0.2,0.3]],
+    c: [-0.6,0.5,0.1,0.0,0.1]
+  }
+};
+
+function softmax(z){const m=Math.max(...z);const e=z.map(v=>Math.exp(v-m));const s=e.reduce((a,b)=>a+b,0);return e.map(v=>v/s);}
+function predict(h){ return softmax(add(mv(P.out.V,h),P.out.c)); }
+
+function runElman(whScale=1){
+  const Wh = P.elman.Wh.map((r,i)=>r.map((w,j)=> (i===0&&j===0)? w*whScale : w));
+  let h=[0,0,0,0]; const steps=[];
+  TOKENS.forEach((tok,t)=>{
+    const x=EMB[t];
+    const ax=mv(P.elman.Wx,x), ah=mv(Wh,h), a=add(ax,ah,P.elman.b), hn=a.map(tanh);
+    steps.push({tok,x,hPrev:h,ax,ah,a,h:hn,p:predict(hn)});
+    h=hn;
+  });
+  return {steps,Wh};
+}
+function gate(G,x,h,act){ const wx=mv(G.W,x), uh=mv(G.U,h); const a=add(wx,uh,G.b); return {wx,uh,a,v:a.map(act)}; }
+function runLSTM(){
+  let h=[0,0,0,0],c=[0,0,0,0]; const steps=[];
+  TOKENS.forEach((tok,t)=>{
+    const x=EMB[t];
+    const f=gate(P.lstm.f,x,h,sig), i=gate(P.lstm.i,x,h,sig), g=gate(P.lstm.g,x,h,tanh), o=gate(P.lstm.o,x,h,sig);
+    const keep=mul(f.v,c), write=mul(i.v,g.v), cn=add(keep,write), hn=mul(o.v,cn.map(tanh));
+    steps.push({tok,x,hPrev:h,cPrev:c,f,i,g,o,keep,write,c:cn,h:hn,p:predict(hn)});
+    h=hn;c=cn;
+  });
+  return {steps};
+}
+function runGRU(){
+  let h=[0,0,0,0]; const steps=[];
+  TOKENS.forEach((tok,t)=>{
+    const x=EMB[t];
+    const z=gate(P.gru.z,x,h,sig), r=gate(P.gru.r,x,h,sig);
+    const rh=mul(r.v,h);
+    const nwx=mv(P.gru.n.W,x), nuh=mv(P.gru.n.U,rh), na=add(nwx,nuh,P.gru.n.b), n={wx:nwx,uh:nuh,a:na,v:na.map(tanh)};
+    const keep=mul(z.v,h), write=mul(z.v.map(v=>1-v),n.v), hn=add(keep,write);
+    steps.push({tok,x,hPrev:h,z,r,rh,n,keep,write,h:hn,p:predict(hn)});
+    h=hn;
+  });
+  return {steps};
+}
+if (typeof module!=="undefined") module.exports={TOKENS,EMB,CANDS,P,runElman,runLSTM,runGRU};
+
+</script>
+<script>
+// =====================================================================
+//  Utilidades
+// =====================================================================
+const $ = s => document.querySelector(s);
+const DIMS  = ["h₁ país","h₂ idioma","h₃ negación","h₄ ¿?"];      // dimensiones de h (y de C)
+const XDIMS = ["x₁ lugar","x₂ comunicación","x₃ negación"];         // dimensiones del embedding x
+const XDESC = ["alto en «Francia», algo en «mudarme»","alto en «comunicarme», «sabía», «cuesta»","alto en «no», «nada», «cuesta», «pero»"];
+const HDESC = ["recuerda que se mencionó un país","contexto de comunicación o idiomas","hay una negación o carencia","sin significado claro (a propósito)"];
+const KEY = 2;               // índice de «Francia»
+const T = TOKENS.length;     // 20
+const fmt = v => (v < -0.0049 ? "−" : "") + Math.abs(v).toFixed(2);
+const fmtInt = n => n.toLocaleString("es-PE");
+const state = { nums:false, tab:"elman", whScale:1 };
+const runs = { elman: runElman(1), lstm: runLSTM(), gru: runGRU() };
+const M = { elman:{t:0,s:4,N:4,timer:null}, lstm:{t:0,s:6,N:6,timer:null}, gru:{t:0,s:4,N:4,timer:null} };
+
+let COL = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  ["xc","pos","neg","cell0","ink","gf","gi","gg","go","gz","gr","accent","surface","wire","muted"].forEach(k => COL[k] = cs.getPropertyValue("--"+k).trim());
+}
+function hex2rgb(h){ h=h.replace("#",""); if(h.length===3) h=h.split("").map(c=>c+c).join(""); return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)); }
+function mix(a,b,t){ const A=hex2rgb(a),B=hex2rgb(b); return "rgb("+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")+")"; }
+function lum(a,b,t){ const A=hex2rgb(a),B=hex2rgb(b); const c=A.map((v,i)=>v+(B[i]-v)*t); return (0.299*c[0]+0.587*c[1]+0.114*c[2])/255; }
+function cellColor(v, kind, gate){
+  if (kind === "gate"){ const t=Math.max(0,Math.min(1,v)); return { bg:mix(COL.cell0,COL[gate],t), fg: lum(COL.cell0,COL[gate],t) < 0.55 ? "#fff" : COL.ink }; }
+  const t=Math.min(1,Math.abs(v)), c = v>=0 ? COL.pos : COL.neg;
+  return { bg:mix(COL.cell0,c,t), fg: lum(COL.cell0,c,t) < 0.55 ? "#fff" : COL.ink };
+}
+// subíndices en SVG (dy funciona en todos los navegadores)
+const sb = (base, sub, rest="") => `${base}<tspan dy="4" font-size="0.72em">${sub}</tspan><tspan dy="-4">${rest}</tspan>`;
+
+// ---------------------------------------------------------------------
+//  Piezas SVG
+// ---------------------------------------------------------------------
+const CW=30, CH=22, GAP=2, VH=4*CH+3*GAP; // vector vertical de 4 celdas
+function vec(x,y,vals,o={}){
+  const kind=o.kind||"div", gate=o.gate||"gf", hidden=o.hidden, names=o.names||DIMS;
+  const VH=vals.length*CH+(vals.length-1)*GAP;
+  let s=`<g class="${o.cls||""}">`;
+  if (o.cls==="cur") s+=`<rect class="halo" x="${x-4}" y="${y-4}" width="${CW+8}" height="${VH+8}" rx="6"/>`;
+  if (o.names) s+=`<rect x="${x-2}" y="${y-2}" width="${CW+4}" height="${VH+4}" rx="6" fill="none" stroke="${COL.xc}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+  vals.forEach((v,i)=>{
+    const yy=y+i*(CH+GAP);
+    const c = hidden ? {bg:COL.cell0,fg:COL.muted} : cellColor(v,kind,gate);
+    s+=`<rect x="${x}" y="${yy}" width="${CW}" height="${CH}" rx="4" fill="${c.bg}"><title>${names[i]}: ${hidden?"?":fmt(v)}</title></rect>`;
+    if (state.nums && !hidden) s+=`<text class="num" x="${x+CW/2}" y="${yy+CH/2+3}" text-anchor="middle" style="fill:${c.fg}">${fmt(v)}</text>`;
+    if (hidden) s+=`<text class="num" x="${x+CW/2}" y="${yy+CH/2+3}" text-anchor="middle" style="fill:${COL.muted}">?</text>`;
+    if (o.rows) s+=`<text class="rowlbl" x="${x-8}" y="${yy+CH/2+4}" text-anchor="end" ${o.names?`style="fill:${COL.xc}"`:""}>${names[i]}</text>`;
+  });
+  if (o.label){
+    const ly = o.below ? y+VH+18 : y-9;
+    s+=`<text class="lbl" x="${x+CW/2}" y="${ly}" text-anchor="middle" ${o.lcolor?`style="fill:${o.lcolor}"`:""}>${o.label}</text>`;
+  }
+  if (o.sub){ const ly = o.below ? y+VH+34 : y-26; s+=`<text class="sublbl" x="${x+CW/2}" y="${ly}" text-anchor="middle">${o.sub}</text>`; }
+  return s+"</g>";
+}
+function wire(d,cls,id){ return `<path class="wire ${cls}" d="${d}" marker-end="url(#ar-${id}-${cls==="cur"?"c":"n"})"/>`; }
+function line(d,cls){ return `<path class="wire ${cls}" d="${d}"/>`; }
+function box(cx,cy,w,h,txt,cls,color,sub,sdx=0){
+  const c = COL[color] || COL.ink;
+  let s=`<g class="${cls} ${cls==="cur"?"g-cur":""}"><rect class="boxrect" x="${cx-w/2}" y="${cy-h/2}" width="${w}" height="${h}" rx="9" fill="${mix(COL.surface,c,0.14)}" stroke="${c}" stroke-width="2"/>`;
+  s+=`<text class="boxtxt" x="${cx}" y="${cy}" style="fill:${c}">${txt}</text>`;
+  if (sub) s+=`<text class="sublbl" x="${cx+sdx}" y="${cy+h/2+16}" text-anchor="middle" style="fill:${c};font-weight:600">${sub}</text>`;
+  return s+"</g>";
+}
+function node(cx,cy,sym,cls,r=13){ return `<g class="${cls}"><circle class="node" cx="${cx}" cy="${cy}" r="${r}"/><text class="nodesym" x="${cx}" y="${cy}">${sym}</text></g>`; }
+function defs(id){
+  return `<defs>
+    <marker id="ar-${id}-n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:${COL.wire}"/></marker>
+    <marker id="ar-${id}-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:${COL.accent}"/></marker>
+  </defs>`;
+}
+const K = m => n => m.s < n ? "fut" : (m.s === n ? "cur" : "past");
+const ZERO=[0,0,0,0];
+
+// =====================================================================
+//  Diagramas
+// =====================================================================
+function svgElman(){
+  const m=M.elman, st=runs.elman.steps[m.t], k=K(m), id="e";
+  const hid = n => m.s < n;
+  let s=defs(id);
+  const hp = m.t===0 ? sb("h","0"," = 0") : sb("h","t−1");
+  // entradas
+  s+=vec(110,43,st.hPrev,{label:hp,rows:true,cls:k(0)});
+  s+=vec(110,220,st.x,{label:sb("x","t"),sub:`emb(«${st.tok}») · 3 dim`,below:true,rows:true,names:XDIMS,lcolor:COL.xc,cls:k(0)});
+  // W_x · x
+  s+=wire("M142 255 L172 255",k(1),id)+box(220,255,90,44,"W"+"ₓ ·",k(1),"accent","matriz 4×3");
+  s+=wire("M266 255 L292 255",k(1),id)+vec(295,208,st.ax,{label:sb("W","x","·x")+`<tspan dy="4" font-size="0.72em">t</tspan>`,below:true,cls:k(1),hidden:hid(1)});
+  // W_h · h
+  s+=wire("M142 90 L172 90",k(2),id)+box(220,90,90,44,"Wₕ ·",k(2),"accent","matriz 4×4");
+  s+=wire("M266 90 L292 90",k(2),id)+vec(295,43,st.ah,{label:sb("W","h","·h")+`<tspan dy="4" font-size="0.72em">t−1</tspan>`,cls:k(2),hidden:hid(2)});
+  // suma + b
+  s+=wire("M327 90 C362 90 378 122 390 158",k(3),id)+wire("M327 255 C362 255 378 222 390 186",k(3),id);
+  s+=vec(386,214,P.elman.b,{label:"b",below:true,cls:k(3)});
+  s+=wire("M401 212 L401 190",k(3),id)+node(401,172,"+",k(3),16);
+  s+=wire("M418 172 L446 172",k(3),id)+vec(450,125,st.a,{label:sb("a","t"),cls:k(3),hidden:hid(3)});
+  // tanh
+  s+=wire("M482 172 L513 172",k(4),id)+box(555,172,80,44,"tanh",k(4),"accent");
+  s+=wire("M596 172 L626 172",k(4),id)+vec(630,125,st.h,{label:sb("h","t"),cls:k(4),hidden:hid(4)});
+  // salida y recurrencia
+  s+=wire("M662 172 L705 172",k(4),id)+box(795,172,170,44,"softmax(V·h + c)",k(4),"ink","→ predicción ŷ");
+  s+=wire("M645 221 L645 348 L18 348 L18 90 L106 90",k(4),id);
+  s+=`<text class="sublbl ${k(4)}" x="330" y="366" text-anchor="middle">h(t) vuelve a entrar como h(t−1) cuando llega la siguiente palabra</text>`;
+  $("#svg-elman").innerHTML=s;
+}
+
+function svgLSTM(){
+  const m=M.lstm, st=runs.lstm.steps[m.t], k=K(m), id="l";
+  const hid = n => m.s < n;
+  let s=defs(id);
+  const first = m.t===0;
+  s+=`<path class="belt" d="M142 70 L905 70"/>`;
+  s+=`<text class="sublbl" x="905" y="58" text-anchor="end">estado de celda C (cinta transportadora)</text>`;
+  s+=vec(110,23,st.cPrev,{label:first?sb("C","0"," = 0"):sb("C","t−1"),rows:true,cls:k(0)});
+  s+=vec(110,335,st.x,{label:sb("x","t"),rows:true,names:XDIMS,lcolor:COL.xc,cls:k(0)});
+  s+=vec(150,323,st.hPrev,{label:first?sb("h","0"):sb("h","t−1"),cls:k(0)});
+  s+=`<text class="sublbl ${k(0)}" x="125" y="424" text-anchor="middle">«${st.tok}»</text>`;
+  s+=line("M182 370 L560 370",k(0));
+  s+=`<text class="sublbl" x="566" y="392">[h(t−1), x(t)] entra a las 4 capas</text>`;
+  const gateCol=(cx,n,txt,col,sub,vals,kind,lab)=>{
+    let g=wire(`M${cx-32} 370 L${cx-32} 322`,k(n),id)+box(cx,300,90,40,txt,k(n),col,sub,16);
+    g+=wire(`M${cx} 279 L${cx} 257`,k(n),id)+vec(cx-15,160,vals,{kind,gate:col,label:lab,lcolor:COL[col],cls:k(n),hidden:hid(n)});
+    return g;
+  };
+  s+=gateCol(220,1,"σ   f","gf","olvido",st.f.v,"gate",sb("f","t"));
+  s+=gateCol(330,2,"σ   i","gi","entrada",st.i.v,"gate",sb("i","t"));
+  s+=gateCol(450,3,"tanh  g","gg","candidato",st.g.v,"div",sb("g","t"));
+  s+=gateCol(580,5,"σ   o","go","salida",st.o.v,"gate",sb("o","t"));
+  // actualización de C
+  s+=wire("M142 70 L205 70",k(4),id)+wire("M220 156 L220 86",k(4),id)+node(220,70,"×",k(4));
+  s+=wire("M234 70 L258 70",k(4),id)+vec(262,23,st.keep,{label:"f⊙C",cls:k(4),hidden:hid(4)});
+  s+=wire("M330 156 L379 134",k(4),id)+wire("M450 156 L401 134",k(4),id)+node(390,126,"×",k(4),12);
+  s+=`<text class="sublbl ${k(4)}" x="408" y="118">i⊙g</text>`;
+  s+=wire("M294 70 L374 70",k(4),id)+wire("M390 113 L390 87",k(4),id)+node(390,70,"+",k(4),14);
+  s+=wire("M405 70 L466 70",k(4),id)+vec(470,23,st.c,{label:sb("C","t"),cls:k(4),hidden:hid(4)});
+  // salida h
+  s+=wire("M680 72 L680 113",k(6),id)+box(680,128,58,28,"tanh",k(6),"ink");
+  s+=wire("M680 142 L680 190",k(6),id)+wire("M597 207 L666 205",k(6),id)+node(680,205,"×",k(6));
+  s+=wire("M694 205 L736 205",k(6),id)+vec(740,158,st.h,{label:sb("h","t"),cls:k(6),hidden:hid(6)});
+  s+=wire("M772 205 L793 205",k(6),id)+box(860,205,130,40,"softmax",k(6),"ink","→ predicción ŷ");
+  s+=wire("M755 256 L755 432 L165 432 L165 421",k(6),id);
+  s+=`<text class="sublbl ${k(6)}" x="905" y="96" text-anchor="end">C(t) pasa al siguiente paso</text>`;
+  $("#svg-lstm").innerHTML=s;
+}
+
+function svgGRU(){
+  const m=M.gru, st=runs.gru.steps[m.t], k=K(m), id="g";
+  const hid = n => m.s < n;
+  let s=defs(id);
+  const first=m.t===0;
+  s+=`<path class="belt" d="M142 70 L905 70"/>`;
+  s+=`<text class="sublbl" x="905" y="58" text-anchor="end">memoria h (la única que tiene la GRU)</text>`;
+  s+=vec(110,23,st.hPrev,{label:first?sb("h","0"," = 0"):sb("h","t−1"),rows:true,cls:k(0)});
+  s+=vec(110,335,st.x,{label:sb("x","t"),rows:true,names:XDIMS,lcolor:COL.xc,cls:k(0)});
+  s+=`<text class="sublbl ${k(0)}" x="125" y="424" text-anchor="middle">«${st.tok}»</text>`;
+  s+=line("M160 70 L160 370",k(0))+line("M142 370 L530 370",k(0));
+  s+=`<text class="sublbl" x="538" y="392">[h(t−1), x(t)]</text>`;
+  // z
+  s+=wire("M188 370 L188 322",k(1),id)+box(220,300,90,40,"σ   z",k(1),"gz","actualización",18);
+  s+=wire("M220 279 L220 257",k(1),id)+vec(205,160,st.z.v,{kind:"gate",gate:"gz",label:sb("z","t"),lcolor:COL.gz,cls:k(1),hidden:hid(1)});
+  // r
+  s+=wire("M318 370 L318 322",k(2),id)+box(350,300,90,40,"σ   r",k(2),"gr","reinicio",16);
+  s+=wire("M350 279 L350 257",k(2),id)+vec(335,160,st.r.v,{kind:"gate",gate:"gr",label:sb("r","t"),lcolor:COL.gr,cls:k(2),hidden:hid(2)});
+  // candidato
+  s+=wire("M367 207 L418 214",k(3),id)+wire("M430 370 L430 231",k(3),id)+node(430,217,"×",k(3),12);
+  s+=`<text class="sublbl ${k(3)}" x="384" y="248">r⊙h</text>`;
+  s+=wire("M442 222 C460 230 468 252 470 278",k(3),id)+wire("M530 370 L530 322",k(3),id);
+  s+=box(500,300,90,40,"tanh  h̃",k(3),"gg","candidato",-14);
+  s+=wire("M500 279 L500 257",k(3),id)+vec(485,160,st.n.v,{label:"h̃"+`<tspan dy="4" font-size="0.72em">t</tspan>`,lcolor:COL.gg,cls:k(3),hidden:hid(3)});
+  // mezcla
+  s+=wire("M142 70 L205 70",k(4),id)+wire("M220 156 L220 86",k(4),id)+node(220,70,"×",k(4));
+  s+=wire("M234 70 L258 70",k(4),id)+vec(262,23,st.keep,{label:"z⊙h",cls:k(4),hidden:hid(4)});
+  s+=wire("M237 200 L282 138",k(4),id)+node(290,128,"1−",k(4),13);
+  s+=wire("M304 128 L547 128",k(4),id)+wire("M500 156 L549 135",k(4),id)+node(560,128,"×",k(4),12);
+  s+=`<text class="sublbl ${k(4)}" x="574" y="152">(1−z)⊙h̃</text>`;
+  s+=wire("M294 70 L545 70",k(4),id)+wire("M560 115 L560 86",k(4),id)+node(560,70,"+",k(4),14);
+  s+=wire("M575 70 L616 70",k(4),id)+vec(620,23,st.h,{label:sb("h","t"),cls:k(4),hidden:hid(4)});
+  s+=wire("M700 72 L700 190",k(4),id)+box(700,212,130,40,"softmax",k(4),"ink","→ predicción ŷ");
+  s+=`<text class="sublbl ${k(4)}" x="905" y="96" text-anchor="end">h(t) pasa al siguiente paso</text>`;
+  $("#svg-gru").innerHTML=s;
+}
+
+// =====================================================================
+//  Fórmulas y lectura
+// =====================================================================
+function vchips(vals, kind="div", gate){
+  return vals.map((v,i)=>{ const c=cellColor(v,kind,gate); return `<span class="vchip" title="${DIMS[i]}: ${fmt(v)}" style="background:${c.bg};color:${c.fg}">${state.nums?fmt(v):"&nbsp;"}</span>`; }).join("");
+}
+function frow(n, m, eq, what, valsHtml){
+  const cls = m.s < n ? "fut" : (m.s===n ? "cur" : "past");
+  return `<div class="frow ${cls}"><div class="n">${n}</div><div><div class="eq">${eq}</div><div class="what">${what}</div>${m.s>=n && valsHtml ? `<div class="vals">${valsHtml}</div>` : ""}</div></div>`;
+}
+function memTable(prev, next, name, done){
+  if (!done) return `<p class="small muted" style="margin-top:6px">Completa las operaciones para ver cómo cambió ${name}.</p>`;
+  let r=`<table class="memtab"><thead><tr><th>${name}</th><th>antes</th><th>después</th><th></th></tr></thead><tbody>`;
+  prev.forEach((p,i)=>{ const d=next[i]-p; const a = Math.abs(d)<0.02 ? "≈" : (d>0?`<span class="up">▲</span>`:`<span class="down">▼</span>`);
+    r+=`<tr><td>${DIMS[i]}</td><td>${fmt(p)}</td><td><b>${fmt(next[i])}</b></td><td>${a}</td></tr>`; });
+  return r+"</tbody></table>";
+}
+const READ = {
+  elman:[
+    t=>`Llegan dos entradas: el embedding de «${t}» (x<sub>t</sub>) y la memoria del paso anterior (h<sub>t−1</sub>).`,
+    t=>`W<sub>x</sub> (4×3) lleva el embedding de «${t}», que tiene 3 dimensiones, al espacio de 4 dimensiones de la memoria. Cada fila de W<sub>x</sub> es una neurona de h.`,
+    t=>`W<sub>h</sub> (4×4) transforma la memoria anterior: entra un vector de 4 y sale uno de 4. Aquí está el problema: en la dimensión h₁ (país) W<sub>h</sub> vale ${fmt(runs.elman.Wh[0][0])}, así que lo que había se encoge en cada paso.`,
+    t=>`Se suman las dos contribuciones y el bias b. El resultado a<sub>t</sub> se llama pre-activación.`,
+    t=>`tanh comprime a<sub>t</sub> al rango (−1, 1). El resultado h<sub>t</sub> es a la vez la memoria nueva y lo que usa la capa de salida para predecir.`
+  ],
+  lstm:[
+    t=>`Llegan x<sub>t</sub> («${t}»), la salida anterior h<sub>t−1</sub> y el estado de celda C<sub>t−1</sub>, que es la memoria de largo plazo.`,
+    t=>`Compuerta de olvido: para cada dimensión decide qué fracción de C<sub>t−1</sub> se conserva (1 = conservar todo, 0 = borrar). En la dimensión 1 (país) está en ${fmt(runs.lstm.steps[M.lstm.t].f.v[0])}: casi no borra nada.`,
+    t=>`Compuerta de entrada: decide cuánto se va a escribir en cada dimensión. ${M.lstm.t===KEY?"Con «Francia» se abre en la dimensión 1 (país).":"En la dimensión 1 está casi cerrada: no hay nada nuevo que guardar."}`,
+    t=>`Candidato g<sub>t</sub> (o C̃<sub>t</sub>): el contenido nuevo que se podría escribir, entre −1 y 1.`,
+    t=>`C<sub>t</sub> = lo que se conserva + lo que se escribe. Es una suma con multiplicación elemento a elemento, sin pasar por ninguna matriz W: por eso la información puede viajar muchos pasos sin desvanecerse.`,
+    t=>`Compuerta de salida: decide qué parte de la memoria se muestra ahora. ${M.lstm.t>=11?"Desde «comunicarme» el contexto es de idioma y se abre en la dimensión 1 (país).":"Por ahora está bastante cerrada en la dimensión 1: la memoria se guarda pero no se muestra."}`,
+    t=>`h<sub>t</sub> = o<sub>t</sub> ⊙ tanh(C<sub>t</sub>): la parte visible de la memoria. Se usa para predecir y pasa al siguiente paso.`
+  ],
+  gru:[
+    t=>`Llegan x<sub>t</sub> («${t}») y h<sub>t−1</sub>. La GRU no tiene estado de celda aparte: h hace de memoria.`,
+    t=>`Compuerta de actualización: cuánto de h<sub>t−1</sub> se conserva (z≈1) y cuánto se reemplaza por el candidato (z≈0). En la dimensión 1 (país) vale ${fmt(runs.gru.steps[M.gru.t].z.v[0])}.`,
+    t=>`Compuerta de reinicio: cuánto del pasado se usa para calcular el candidato. Con r≈0 el candidato depende solo de la palabra actual.`,
+    t=>`Candidato h̃<sub>t</sub>, calculado con la palabra actual y con la memoria filtrada por r.`,
+    t=>`Mezcla: h<sub>t</sub> = z ⊙ h<sub>t−1</sub> + (1−z) ⊙ h̃<sub>t</sub>. Una sola compuerta hace el trabajo que en la LSTM hacen olvido y entrada juntas.`
+  ]
+};
+function formulasElman(){
+  const m=M.elman, st=runs.elman.steps[m.t];
+  let h=`<div class="formulas">`;
+  h+=frow(1,m,`W<sub>x</sub>·x<sub>t</sub>`,`aporte de la palabra actual`,vchips(st.ax));
+  h+=frow(2,m,`W<sub>h</sub>·h<sub>t−1</sub>`,`aporte de la memoria anterior`,vchips(st.ah));
+  h+=frow(3,m,`a<sub>t</sub> = W<sub>x</sub>·x<sub>t</sub> + W<sub>h</sub>·h<sub>t−1</sub> + b`,`pre-activación`,vchips(st.a));
+  h+=frow(4,m,`h<sub>t</sub> = tanh(a<sub>t</sub>)`,`memoria nueva`,vchips(st.h));
+  h+=`</div><div class="reading"><h4>Paso ${m.t+1} de ${T} · «${st.tok}»</h4>${READ.elman[m.s](st.tok)}${memTable(st.hPrev,st.h,"h",m.s===m.N)}</div>`;
+  $("#f-elman").innerHTML=h;
+}
+function formulasLSTM(){
+  const m=M.lstm, st=runs.lstm.steps[m.t];
+  const G=(g,name,act)=>`${name}<sub>t</sub> = ${act}(W<sub>${name}</sub>·x<sub>t</sub> + U<sub>${name}</sub>·h<sub>t−1</sub> + b<sub>${name}</sub>)`;
+  let h=`<div class="formulas">`;
+  h+=frow(1,m,`<span style="color:var(--gf)">${G(0,"f","σ")}</span>`,`olvido: qué conservar de C<sub>t−1</sub>`,vchips(st.f.v,"gate","gf"));
+  h+=frow(2,m,`<span style="color:var(--gi)">${G(0,"i","σ")}</span>`,`entrada: cuánto escribir`,vchips(st.i.v,"gate","gi"));
+  h+=frow(3,m,`<span style="color:var(--gg)">${G(0,"g","tanh")}</span>`,`candidato: qué escribir`,vchips(st.g.v));
+  h+=frow(4,m,`C<sub>t</sub> = f<sub>t</sub> ⊙ C<sub>t−1</sub> + i<sub>t</sub> ⊙ g<sub>t</sub>`,`actualizar la memoria de largo plazo`,vchips(st.keep)+`<span class="eqsign">+</span>`+vchips(st.write)+`<span class="eqsign">=</span>`+vchips(st.c));
+  h+=frow(5,m,`<span style="color:var(--go)">${G(0,"o","σ")}</span>`,`salida: qué mostrar`,vchips(st.o.v,"gate","go"));
+  h+=frow(6,m,`h<sub>t</sub> = o<sub>t</sub> ⊙ tanh(C<sub>t</sub>)`,`memoria visible`,vchips(st.h));
+  h+=`</div><p class="small muted" style="margin-top:8px">Cada W es de 4×3 (actúa sobre x) y cada U de 4×4 (actúa sobre h). Muchos libros escriben W·[h<sub>t−1</sub>, x<sub>t</sub>]: es lo mismo, con W y U pegadas en una sola matriz de 4×7.</p>`;
+  h+=`<div class="reading"><h4>Paso ${m.t+1} de ${T} · «${st.tok}»</h4>${READ.lstm[m.s](st.tok)}${memTable(st.cPrev,st.c,"C",m.s===m.N)}</div>`;
+  $("#f-lstm").innerHTML=h;
+}
+function formulasGRU(){
+  const m=M.gru, st=runs.gru.steps[m.t];
+  let h=`<div class="formulas">`;
+  h+=frow(1,m,`<span style="color:var(--gz)">z<sub>t</sub> = σ(W<sub>z</sub>·x<sub>t</sub> + U<sub>z</sub>·h<sub>t−1</sub> + b<sub>z</sub>)</span>`,`actualización: cuánto conservar`,vchips(st.z.v,"gate","gz"));
+  h+=frow(2,m,`<span style="color:var(--gr)">r<sub>t</sub> = σ(W<sub>r</sub>·x<sub>t</sub> + U<sub>r</sub>·h<sub>t−1</sub> + b<sub>r</sub>)</span>`,`reinicio: cuánto pasado usar`,vchips(st.r.v,"gate","gr"));
+  h+=frow(3,m,`<span style="color:var(--gg)">h̃<sub>t</sub> = tanh(W<sub>h</sub>·x<sub>t</sub> + U<sub>h</sub>·(r<sub>t</sub> ⊙ h<sub>t−1</sub>) + b<sub>h</sub>)</span>`,`candidato`,vchips(st.n.v));
+  h+=frow(4,m,`h<sub>t</sub> = z<sub>t</sub> ⊙ h<sub>t−1</sub> + (1 − z<sub>t</sub>) ⊙ h̃<sub>t</sub>`,`mezcla de lo viejo y lo nuevo`,vchips(st.keep)+`<span class="eqsign">+</span>`+vchips(st.write)+`<span class="eqsign">=</span>`+vchips(st.h));
+  h+=`</div><div class="reading"><h4>Paso ${m.t+1} de ${T} · «${st.tok}»</h4>${READ.gru[m.s](st.tok)}${memTable(st.hPrev,st.h,"h",m.s===m.N)}</div>`;
+  $("#f-gru").innerHTML=h;
+}
+
+// =====================================================================
+//  Predicción
+// =====================================================================
+function renderPred(key){
+  const m=M[key], steps=runs[key].steps;
+  const done = m.s===m.N;
+  const idx = done ? m.t : m.t-1;
+  const el=$("#p-"+key);
+  if (idx<0){ el.innerHTML=`<p class="pred-cap">Todavía no leyó ninguna palabra. Completa el primer paso.</p>`; return; }
+  const p=steps[idx].p;
+  const last = idx===T-1;
+  let h=`<p class="pred-cap">${last?`Predicción para <b>«___»</b> después de leer toda la oración.`:`Si la oración siguiera después de «${steps[idx].tok}», ¿cuál de estas palabras elegiría? ${done?"":"(paso anterior, mientras se calcula el actual)"}`}</p><div class="pred">`;
+  CANDS.forEach((w,i)=>{ h+=`<div class="prow ${i===0?"target":""}"><span class="word">${w}</span><span class="track"><span class="fill" style="display:block;width:${(p[i]*100).toFixed(1)}%"></span></span><span class="pct">${Math.round(p[i]*100)}%</span></div>`; });
+  h+=`</div><p class="small muted" style="margin-top:10px">ŷ = softmax(V·h<sub>t</sub> + c), restringido a 5 candidatos para que se lea en pantalla. La misma capa de salida se usa para las tres celdas.</p>`;
+  el.innerHTML=h;
+}
+
+// =====================================================================
+//  Gráficos de línea
+// =====================================================================
+function chart(el, o){
+  const W=o.width||640, H=o.height||230, ml=50, mr=14, mt=12, mb=70;
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const xs=i=>ml+pw*(i+0.5)/T;
+  const lg=v=>Math.log10(Math.max(v,1e-9));
+  const y0=o.log?lg(o.ymin):o.ymin, y1=o.log?lg(o.ymax):o.ymax;
+  const ys=v=>mt+ph*(1-((o.log?lg(v):v)-y0)/(y1-y0));
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria||"gráfico"}">`;
+  (o.ticks||[]).forEach(t=>{ s+=`<line class="grid" x1="${ml}" x2="${W-mr}" y1="${ys(t)}" y2="${ys(t)}"/><text x="${ml-6}" y="${ys(t)+4}" text-anchor="end">${o.tf?o.tf(t):t}</text>`; });
+  if (!o.log && o.ymin<0) s+=`<line class="axis" x1="${ml}" x2="${W-mr}" y1="${ys(0)}" y2="${ys(0)}"/>`;
+  s+=`<line class="axis" x1="${ml}" x2="${ml}" y1="${mt}" y2="${mt+ph}"/>`;
+  TOKENS.forEach((tk,i)=>{ s+=`<text x="${xs(i)}" y="${mt+ph+12}" transform="rotate(-50 ${xs(i)} ${mt+ph+12})" text-anchor="end" style="${i===KEY?`fill:${COL.accent};font-weight:700`:""}">${tk}</text>`; });
+  if (o.marker!=null) s+=`<rect x="${xs(o.marker)-pw/T/2}" y="${mt}" width="${pw/T}" height="${ph}" style="fill:${COL.accent};opacity:.09"/>`;
+  o.series.forEach(se=>{
+    const pts=se.values.map((v,i)=>v==null?null:[xs(i),ys(v)]).filter(Boolean);
+    s+=`<polyline points="${pts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="${se.color}" stroke-width="2.6" ${se.dash?`stroke-dasharray="6 4"`:""} stroke-linejoin="round"/>`;
+    pts.forEach(p=>{ s+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="${se.color}"/>`; });
+  });
+  s+="</svg>";
+  el.innerHTML = (o.legend!==false ? `<div class="legend">${o.series.map(se=>`<span><i style="background:${se.color}"></i>${se.name}</span>`).join("")}</div>` : "") + s;
+}
+function elmanGrad(run){
+  const mm=(A,B)=>A.map((r,i)=>B[0].map((_,j)=>r.reduce((s,_,k)=>s+A[i][k]*B[k][j],0)));
+  let J=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]; const out=Array(T).fill(null); out[KEY]=1;
+  for(let t=KEY+1;t<T;t++){ const h=run.steps[t].h; const Jt=run.Wh.map((r,i)=>r.map(w=>w*(1-h[i]*h[i]))); J=mm(Jt,J); out[t]=Math.sqrt(J.flat().reduce((s,v)=>s+v*v,0)); }
+  return out;
+}
+function gateProd(steps, getter){ const out=Array(T).fill(null); out[KEY]=1; let p=1; for(let t=KEY+1;t<T;t++){ p*=getter(steps[t]); out[t]=p; } return out; }
+function toSup(n){ const m="⁰¹²³⁴⁵⁶⁷⁸⁹"; return "⁻"+String(n).split("").map(d=>m[d]).join(""); }
+const sci = v => { const e=Math.floor(Math.log10(v)); const m=v/Math.pow(10,e); return e>=0? v.toFixed(2) : m.toFixed(1)+" × 10"+toSup(-e); };
+const logTf = t => t>=1 ? "1" : "10"+toSup(Math.round(-Math.log10(t)));
+
+function insightElman(){
+  const r=runs.elman, m=M.elman;
+  const upto = i => i<=m.t ? true : false;
+  chart($("#c-elman-mem"),{series:[{name:"h₁ Elman",color:COL.accent,values:r.steps.map((s,i)=>upto(i)?s.h[0]:null)}],ymin:-0.4,ymax:1,ticks:[-0.25,0,0.25,0.5,0.75,1],marker:m.t,tf:v=>fmt(v),aria:"Valor de la dimensión país en Elman"});
+  const g=elmanGrad(r);
+  chart($("#c-elman-grad"),{series:[{name:"‖∂h(t) / ∂h(Francia)‖",color:COL.gf,values:g}],log:true,ymin:1e-7,ymax:2,ticks:[1,1e-2,1e-4,1e-6],tf:logTf,marker:m.t,height:260,width:1150,aria:"Gradiente que se desvanece en Elman"});
+  const w=runs.elman.Wh[0][0];
+  const last=g[T-1];
+  $("#grad-text").innerHTML = `Con W<sub>h</sub>[h₁, h₁] = <b>${fmt(w)}</b>, al llegar a «___» la señal de «Francia» se multiplicó por <b>${sci(last)}</b>. ` +
+    (w>=1 ? `Aunque el peso sea mayor que 1, tanh se satura (h cerca de ±1 hace que 1 − h² sea chico) y el gradiente sigue desvaneciéndose. Si además h no se saturara, el gradiente explotaría. La RNN simple no tiene un mecanismo para decidir qué guardar.` : `Prueba subir el peso por encima de 1: la memoria dura más, pero mira qué pasa con el gradiente.`);
+}
+function insightLSTM(){
+  const m=M.lstm, up=i=>i<=m.t;
+  chart($("#c-lstm-mem"),{series:[
+    {name:"C₁ LSTM",color:COL.gf,values:runs.lstm.steps.map((s,i)=>up(i)?s.c[0]:null)},
+    {name:"h₁ LSTM",color:COL.go,values:runs.lstm.steps.map((s,i)=>up(i)?s.h[0]:null)},
+    {name:"h₁ Elman",color:COL.wire,dash:true,values:runs.elman.steps.map((s,i)=>up(i)?s.h[0]:null)}
+  ],ymin:-0.4,ymax:1,ticks:[-0.25,0,0.25,0.5,0.75,1],marker:m.t,tf:v=>fmt(v),aria:"Memoria de país en LSTM"});
+}
+function insightGRU(){
+  const m=M.gru, up=i=>i<=m.t;
+  chart($("#c-gru-mem"),{series:[
+    {name:"z₁",color:COL.gz,values:runs.gru.steps.map((s,i)=>up(i)?s.z.v[0]:null)},
+    {name:"h₁ GRU",color:COL.accent,values:runs.gru.steps.map((s,i)=>up(i)?s.h[0]:null)},
+    {name:"h₁ Elman",color:COL.wire,dash:true,values:runs.elman.steps.map((s,i)=>up(i)?s.h[0]:null)}
+  ],ymin:-0.4,ymax:1,ticks:[-0.25,0,0.25,0.5,0.75,1],marker:m.t,tf:v=>fmt(v),aria:"Compuerta z y memoria de país en GRU"});
+}
+
+// =====================================================================
+//  Stepper y línea de tiempo
+// =====================================================================
+const ROWS = { elman:[["h",s=>s.h]], lstm:[["C",s=>s.c],["h",s=>s.h]], gru:[["h",s=>s.h]] };
+function buildStepper(key){
+  const el=$("#st-"+key);
+  el.innerHTML=`<div class="controls">
+    <button class="btn" data-a="first" title="Volver al inicio">⏮ Inicio</button>
+    <button class="btn" data-a="prevw" title="Palabra anterior (←)">◀ Palabra</button>
+    <button class="btn primary" data-a="nexto" title="Siguiente operación (→)">Operación ▶</button>
+    <button class="btn" data-a="nextw" title="Siguiente palabra (Shift + →)">Palabra ▶▶</button>
+    <button class="btn" data-a="play" title="Reproducir (Espacio)">▶ Reproducir</button>
+    <button class="btn" data-a="last" title="Ir al final">Final ⏭</button>
+    <span class="status" id="status-${key}"></span>
+  </div><div class="timeline" id="tl-${key}"></div>`;
+  el.addEventListener("click",e=>{ const b=e.target.closest("[data-a]"); if(b) act(key,b.dataset.a); const c=e.target.closest("[data-i]"); if(c){ stop(key); M[key].t=+c.dataset.i; M[key].s=M[key].N; render(key);} });
+}
+function act(key,a){
+  const m=M[key];
+  if (a!=="play") stop(key);
+  if (a==="first"){ m.t=0; m.s=0; }
+  if (a==="last"){ m.t=T-1; m.s=m.N; }
+  if (a==="prevw"){ if(m.t>0){ m.t--; } m.s=m.N; }
+  if (a==="nextw"){ if(m.s<m.N) m.s=m.N; else if(m.t<T-1){ m.t++; m.s=m.N; } }
+  if (a==="nexto"){ nextOp(key); }
+  if (a==="play"){ if(m.timer) stop(key); else { if(m.t===T-1&&m.s===m.N){m.t=0;m.s=0;} m.timer=setInterval(()=>{ if(!nextOp(key)) stop(key); render(key); },850); } }
+  render(key);
+}
+function nextOp(key){ const m=M[key]; if(m.s<m.N){ m.s++; return true; } if(m.t<T-1){ m.t++; m.s=0; return true; } return false; }
+function stop(key){ const m=M[key]; if(m.timer){ clearInterval(m.timer); m.timer=null; } }
+function renderTimeline(key){
+  const m=M[key], steps=runs[key].steps;
+  let h="";
+  steps.forEach((st,i)=>{
+    const computed = i<m.t || (i===m.t && m.s===m.N);
+    h+=`<button class="chip ${i===KEY?"key":""} ${i===m.t?"cur":""} ${i>m.t?"future":""}" data-i="${i}" aria-label="Ir a «${st.tok}»"><span class="w">${st.tok}</span><span class="mini">`;
+    ROWS[key].forEach(([nm,get])=>{ h+=`<span class="col">`+get(st).map((v,d)=>`<i title="${nm}[${DIMS[d]}]" style="background:${computed?cellColor(v).bg:COL.cell0}"></i>`).join("")+`<span>${ROWS[key].length>1?nm:""}</span></span>`; });
+    h+=`</span></button>`;
+  });
+  const fin = m.t===T-1 && m.s===m.N;
+  let top="?";
+  if (fin){ const p=steps[T-1].p; top=CANDS[p.indexOf(Math.max(...p))]; }
+  h+=`<span class="chip blank"><span class="w">${fin?top:"___"}</span><span class="mini"><span class="col"><span>${fin?"predice":"falta"}</span></span></span></span>`;
+  const tl=$("#tl-"+key); const sc=tl.scrollLeft; tl.innerHTML=h; tl.scrollLeft=sc;
+  const cur=tl.querySelector(".chip.cur"); if(cur){ const r=cur.offsetLeft-tl.offsetLeft; if(r<tl.scrollLeft||r>tl.scrollLeft+tl.clientWidth-80) tl.scrollLeft=r-120; }
+  const opNames={elman:["entradas","W·x","W·h","suma + b","tanh"],lstm:["entradas","olvido f","entrada i","candidato g","actualizar C","salida o","h = o⊙tanh(C)"],gru:["entradas","actualización z","reinicio r","candidato h̃","mezcla"]};
+  $("#status-"+key).innerHTML=`Palabra <b>${m.t+1}/${T}</b> «${steps[m.t].tok}» · operación <b>${m.s}/${m.N}</b> ${opNames[key][m.s]}`;
+  $("#st-"+key+" [data-a=play]").textContent = m.timer ? "⏸ Pausar" : "▶ Reproducir";
+}
+function render(key){
+  renderTimeline(key);
+  if (key==="elman"){ svgElman(); formulasElman(); insightElman(); }
+  if (key==="lstm"){ svgLSTM(); formulasLSTM(); insightLSTM(); }
+  if (key==="gru"){ svgGRU(); formulasGRU(); insightGRU(); }
+  renderPred(key);
+}
+
+// =====================================================================
+//  Matrices de pesos
+// =====================================================================
+function matHTML(title, A){
+  const isVec=!Array.isArray(A[0]); const rows=isVec?A.map(v=>[v]):A;
+  let h=`<div class="mat"><span class="t">${title}</span><table>`;
+  rows.forEach(r=>{ h+="<tr>"+r.map(v=>{const c=cellColor(Math.max(-1,Math.min(1,v/3)));return `<td style="background:${c.bg};color:${c.fg}">${fmt(v)}</td>`;}).join("")+"</tr>"; });
+  return h+"</table></div>";
+}
+function renderWeights(){
+  $("#m-elman").innerHTML = matHTML("W<sub>x</sub> (4×3)",P.elman.Wx)+matHTML("W<sub>h</sub> (4×4)",runs.elman.Wh)+matHTML("b (4)",P.elman.b)+
+    `<p class="small muted" style="flex-basis:100%">Filas = neuronas de h (h₁…h₄). Columnas de W<sub>x</sub> = dimensiones de x (x₁…x₃); columnas de W<sub>h</sub> = dimensiones de h<sub>t−1</sub>. Total: 4×3 + 4×4 + 4 = 12 + 16 + 4 = 32 parámetros.</p>`;
+  const gl=(name,col,G)=>`<p class="gatehead" style="color:var(--${col})">${name}</p><div class="mats">${matHTML("W (4×3)",G.W)+matHTML("U (4×4)",G.U)+matHTML("b (4)",G.b)}</div>`;
+  $("#m-lstm").innerHTML = gl("Olvido f","gf",P.lstm.f)+gl("Entrada i","gi",P.lstm.i)+gl("Candidato g","gg",P.lstm.g)+gl("Salida o","go",P.lstm.o)+`<p class="small muted" style="margin-top:8px">4 bloques × 32 = 128 parámetros. Fíjate en el bias de olvido de la dimensión 1, país (4.0): hace que f ≈ 0.98 y la memoria casi no se borre.</p>`;
+  $("#m-gru").innerHTML = gl("Actualización z","gz",P.gru.z)+gl("Reinicio r","gr",P.gru.r)+gl("Candidato h̃","gg",P.gru.n)+`<p class="small muted" style="margin-top:8px">3 bloques × 32 = 96 parámetros.</p>`;
+}
+
+// =====================================================================
+//  Parámetros
+// =====================================================================
+const MODELS=[
+  {key:"elman",name:"Elman (SimpleRNN)",gates:[["","accent"]],k:1},
+  {key:"lstm",name:"LSTM",gates:[["f","gf"],["i","gi"],["g","gg"],["o","go"]],k:4},
+  {key:"gru",name:"GRU",gates:[["z","gz"],["r","gr"],["h̃","gg"]],k:3}
+];
+function nbias(key,conv){ if(conv==="torch") return 2; if(conv==="keras"&&key==="gru") return 2; return 1; }
+function blockSVG(mod,dx,dh,nb,highlightRow){
+  const sc=Math.min(1.1, 64/Math.max(dx,dh)); const bw=Math.max(5,4*sc);
+  const gw=dx*sc+dh*sc+nb*(bw+2)+14, W=Math.max(320,mod.k*gw+10), H=dh*sc+44;
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  mod.gates.forEach(([g,col],gi)=>{
+    const x0=gi*gw+4, c=COL[col]||COL.accent;
+    s+=`<rect x="${x0}" y="14" width="${dx*sc}" height="${dh*sc}" rx="3" fill="${mix(COL.surface,c,0.35)}" stroke="${c}"/>`;
+    s+=`<rect x="${x0+dx*sc+3}" y="14" width="${dh*sc}" height="${dh*sc}" rx="3" fill="${mix(COL.surface,c,0.6)}" stroke="${c}"/>`;
+    for(let b=0;b<nb;b++) s+=`<rect x="${x0+dx*sc+dh*sc+6+b*(bw+2)}" y="14" width="${bw}" height="${dh*sc}" rx="2" fill="${c}"/>`;
+    if (highlightRow && gi===0){ const ry=14+dh*sc*0.3; s+=`<rect x="${x0-2}" y="${ry}" width="${dx*sc+dh*sc+6+nb*(bw+2)+2}" height="${Math.max(3,sc*1.5)}" fill="${COL.ink}" opacity=".85"/>`; }
+    s+=`<text x="${x0}" y="10" style="fill:${c};font-weight:700">${g?g+":":""}</text>`;
+    if (gi===0) s+=`<text x="${x0}" y="${dh*sc+30}">W ${dh}×${dx} · U ${dh}×${dh} · b ${dh}${nb>1?" ×2":""}</text>`;
+  });
+  return s+"</svg>";
+}
+function renderParams(){
+  const dx=Math.max(1,+$("#dxn").value||1), dh=Math.max(1,+$("#dhn").value||1), V=Math.max(2,+$("#vocab").value||2), conv=$("#conv").value;
+  const base=dh*dx+dh*dh;
+  let cards="";
+  const totals={};
+  MODELS.forEach(mod=>{
+    const nb=nbias(mod.key,conv), per=base+nb*dh, tot=mod.k*per; totals[mod.key]=tot;
+    const bterm = nb===1 ? `${dh}` : `2×${dh}`;
+    let calc = `${mod.k>1?mod.k+" × (":""}${dh}×${dx} + ${dh}×${dh} + ${bterm}${mod.k>1?")":""}<br>`;
+    calc += `${mod.k>1?"= "+mod.k+" × (":"= "}${fmtInt(dh*dx)} + ${fmtInt(dh*dh)} + ${fmtInt(nb*dh)}${mod.k>1?")":""}<br>`;
+    calc += mod.k>1 ? `= ${mod.k} × ${fmtInt(per)} = <b>${fmtInt(tot)}</b>` : `= <b>${fmtInt(tot)}</b>`;
+    cards+=`<div class="card pcard"><h3>${mod.name}</h3><div class="total">${fmtInt(tot)}</div><div class="small muted">${mod.k} bloque${mod.k>1?"s":""} · ${nb} bias por bloque</div>${blockSVG(mod,dx,dh,nb,false)}<div class="calc">${calc}</div></div>`;
+  });
+  $("#pcards").innerHTML=cards;
+  $("#neuron-text").innerHTML=`Cada neurona j del estado oculto tiene un peso por cada rasgo de x<sub>t</sub> (${dx}), un peso por cada neurona de h<sub>t−1</sub> (${dh}) y un bias: <b>${dx} + ${dh} + 1 = ${fmtInt(dx+dh+1)}</b> parámetros. Como hay ${dh} neuronas: <b>${dh} × ${fmtInt(dx+dh+1)} = ${fmtInt(dh*(dx+dh+1))}</b>, que es lo mismo que ${dh}×${dx} + ${dh}×${dh} + ${dh}. La LSTM repite esto para sus 4 bloques y la GRU para sus 3.`;
+  $("#neuron-svg").innerHTML=`<div style="max-width:380px">`+blockSVG(MODELS[0],dx,dh,1,true)+`</div>`+`<p class="small muted">La franja oscura es una fila: los pesos de una sola neurona.</p>`;
+  const nm={elman:"SimpleRNN",lstm:"LSTM",gru:"GRU"};
+  const torchTot=k=>({elman:1,lstm:4,gru:3})[k]*(base+2*dh);
+  $("#code").textContent =
+`# Keras
+model = keras.Sequential([
+    layers.Embedding(${V}, ${dx}),
+    layers.LSTM(${dh}),        # o SimpleRNN / GRU
+    layers.Dense(${V}, activation="softmax"),
+])
+model.summary()   # LSTM: ${fmtInt(4*(base+dh))} parámetros
+
+# PyTorch
+lstm = nn.LSTM(input_size=${dx}, hidden_size=${dh})
+sum(p.numel() for p in lstm.parameters())   # ${torchTot("lstm")}
+# RNN: ${torchTot("elman")}   GRU: ${torchTot("gru")}`;
+  const emb=V*dx, dense=dh*V+V;
+  let t=`<thead><tr><th>Capa</th><th>Cálculo</th><th>Elman</th><th>LSTM</th><th>GRU</th></tr></thead><tbody>`;
+  t+=`<tr><td>Embedding</td><td class="mono small">${fmtInt(V)} × ${dx}</td><td>${fmtInt(emb)}</td><td>${fmtInt(emb)}</td><td>${fmtInt(emb)}</td></tr>`;
+  t+=`<tr><td>Capa recurrente</td><td class="mono small">ver tarjetas</td><td>${fmtInt(totals.elman)}</td><td>${fmtInt(totals.lstm)}</td><td>${fmtInt(totals.gru)}</td></tr>`;
+  t+=`<tr><td>Densa de salida</td><td class="mono small">${dh} × ${fmtInt(V)} + ${fmtInt(V)}</td><td>${fmtInt(dense)}</td><td>${fmtInt(dense)}</td><td>${fmtInt(dense)}</td></tr>`;
+  const tot=k=>emb+totals[k]+dense;
+  const share=k=>{const T_=tot(k);return `<div class="share" title="Embedding / recurrente / salida"><span style="width:${emb/T_*100}%;background:${COL.wire}"></span><span style="width:${totals[k]/T_*100}%;background:${COL.accent}"></span><span style="width:${dense/T_*100}%;background:${COL.pos}"></span></div>`;};
+  t+=`</tbody><tfoot><tr><td>Total</td><td></td><td>${fmtInt(tot("elman"))}${share("elman")}</td><td>${fmtInt(tot("lstm"))}${share("lstm")}</td><td>${fmtInt(tot("gru"))}${share("gru")}</td></tr></tfoot>`;
+  $("#fulltbl").innerHTML=t+`<caption style="caption-side:bottom;text-align:left;padding-top:8px" class="small muted"><span style="color:${COL.wire}">■</span> embedding · <span style="color:${COL.accent}">■</span> recurrente · <span style="color:${COL.pos}">■</span> salida</caption>`;
+}
+function syncPair(r,n){ $(r).addEventListener("input",()=>{ $(n).value=$(r).value; renderParams(); }); $(n).addEventListener("input",()=>{ $(r).value=Math.min(+$(r).max,+$(n).value||1); renderParams(); }); }
+
+// =====================================================================
+//  Comparación
+// =====================================================================
+function renderCompare(){
+  const E=runs.elman.steps, L=runs.lstm.steps, G=runs.gru.steps;
+  const fin=[["Elman",E[T-1].p],["LSTM",L[T-1].p],["GRU",G[T-1].p]];
+  $("#final").innerHTML=fin.map(([n,p])=>{ const top=CANDS[p.indexOf(Math.max(...p))]; return `<div class="fbox"><div class="lab">${n}</div><div class="big" style="color:${top==="francés"?COL.accent:COL.ink}">${Math.round(p[0]*100)}%</div><div class="small">Palabra más probable: <b class="mono">${top}</b> (${Math.round(Math.max(...p)*100)}%)</div></div>`; }).join("");
+  const rows=[["Elman · h",E.map(s=>s.h[0])],["LSTM · C",L.map(s=>s.c[0])],["LSTM · h",L.map(s=>s.h[0])],["GRU · h",G.map(s=>s.h[0])]];
+  let h=`<thead><tr><th></th>${TOKENS.map((t,i)=>`<th class="${i===KEY?"key":""}">${t}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(([n,v])=>{ h+=`<tr><th>${n}</th>${v.map(x=>{const c=cellColor(x);return `<td style="background:${c.bg};color:${c.fg}" title="${fmt(x)}">${state.nums?fmt(x):""}</td>`;}).join("")}</tr>`; });
+  $("#heat").innerHTML=h+"</tbody>";
+  chart($("#c-cmp"),{series:[
+    {name:"Elman ‖∂h/∂h(Francia)‖",color:COL.wire,values:elmanGrad(runs.elman)},
+    {name:"LSTM ∏ f₁",color:COL.gf,values:gateProd(L,s=>s.f.v[0])},
+    {name:"GRU ∏ z₁",color:COL.gz,values:gateProd(G,s=>s.z.v[0])}
+  ],log:true,ymin:1e-7,ymax:2,ticks:[1,1e-2,1e-4,1e-6],tf:logTf,height:270,width:1150,aria:"Comparación de la señal que sobrevive"});
+  $("#summary").innerHTML=`<thead><tr><th></th><th>Elman</th><th>LSTM</th><th>GRU</th></tr></thead><tbody>
+  <tr><td>Memoria</td><td>h</td><td>h y C</td><td>h</td></tr>
+  <tr><td>Compuertas</td><td>ninguna</td><td>olvido, entrada, salida + candidato</td><td>actualización, reinicio + candidato</td></tr>
+  <tr><td>Bloques de pesos</td><td>1</td><td>4</td><td>3</td></tr>
+  <tr><td>Parámetros (d<sub>x</sub>=30, d<sub>h</sub>=64, 1 bias)</td><td>6,080</td><td>24,320</td><td>18,240</td></tr>
+  <tr><td>Cómo se actualiza la memoria</td><td>se reescribe entera con tanh(W·…)</td><td>C = f⊙C + i⊙g (suma controlada)</td><td>h = z⊙h + (1−z)⊙h̃ (interpolación)</td></tr>
+  <tr><td>Dependencias largas</td><td>difícil (gradiente se desvanece)</td><td>buenas</td><td>buenas</td></tr>
+  <tr><td>Cuándo usarla</td><td>secuencias cortas, fines didácticos</td><td>secuencias largas, más datos</td><td>parecida a LSTM, más liviana y rápida</td></tr></tbody>`;
+}
+
+// =====================================================================
+//  Cabecera, pestañas, teclado, tema
+// =====================================================================
+function renderHeader(){
+  $("#sentence").innerHTML = TOKENS.map((t,i)=>`<span class="tok ${i===KEY?"key":""}">${t}</span>`).join("") + `<span class="tok blank">___</span>`;
+  $("#dims").innerHTML =
+    `<div class="dgroup x"><h3>x<sub>t</sub> · embedding de la palabra (3 dimensiones)</h3><div class="dlist">${XDIMS.map((d,i)=>`<div><b>${d}</b><span>${XDESC[i]}</span></div>`).join("")}</div></div>`+
+    `<div class="dgroup h"><h3>h<sub>t</sub> · memoria de la red (4 dimensiones)</h3><div class="dlist">${DIMS.map((d,i)=>`<div><b>${d}</b><span>${HDESC[i]}</span></div>`).join("")}</div></div>`;
+  $("#dims").insertAdjacentHTML("afterend", `<div class="hypo"><b>Las etiquetas son hipotéticas.</b> Construimos los pesos a mano para que cada dimensión signifique algo y la historia se pueda seguir. En una red entrenada las dimensiones no traen nombre: la información suele estar repartida entre muchas dimensiones y cada dimensión mezcla varias cosas. A veces aparecen unidades interpretables (por ejemplo, celdas de LSTM que siguen si hay una comilla abierta), pero son la excepción. Por eso h₄ queda sin etiqueta.</div>`);
+}
+const TABS=["elman","lstm","gru","parametros","comparacion"];
+function showTab(name){
+  if(!TABS.includes(name)) name="elman";
+  state.tab=name;
+  document.querySelectorAll("section[data-tab]").forEach(s=>s.classList.toggle("active",s.dataset.tab===name));
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.go===name?"true":"false"));
+  Object.keys(M).forEach(k=>{ if(k!==name) stop(k); });
+  if (M[name]) render(name);
+  if (name==="parametros") renderParams();
+  if (name==="comparacion") renderCompare();
+}
+function renderAll(){ readColors(); Object.keys(M).forEach(render); renderWeights(); renderParams(); renderCompare(); }
+
+$("#tabs").addEventListener("click",e=>{ const b=e.target.closest("[data-go]"); if(b){ location.hash=b.dataset.go; } });
+window.addEventListener("hashchange",()=>showTab(location.hash.slice(1)));
+$("#nums").addEventListener("change",e=>{ state.nums=e.target.checked; renderAll(); });
+$("#wh").addEventListener("input",e=>{ const v=+e.target.value; $("#whout").textContent=v.toFixed(2); runs.elman=runElman(v/0.45); render("elman"); renderWeights(); renderCompare(); });
+syncPair("#dx","#dxn"); syncPair("#dh","#dhn");
+$("#vocab").addEventListener("input",renderParams); $("#conv").addEventListener("change",renderParams);
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{ const [a,c]=b.dataset.preset.split(","); $("#dx").value=$("#dxn").value=a; $("#dh").value=$("#dhn").value=c; renderParams(); }));
+document.addEventListener("keydown",e=>{
+  if (["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName)) return;
+  const key=state.tab; if(!M[key]) return;
+  if (e.key==="ArrowRight"){ e.preventDefault(); act(key, e.shiftKey?"nextw":"nexto"); }
+  else if (e.key==="ArrowLeft"){ e.preventDefault(); act(key,"prevw"); }
+  else if (e.key===" "){ e.preventDefault(); act(key,"play"); }
+});
+new MutationObserver(renderAll).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",renderAll); }catch(e){}
+
+renderHeader();
+["elman","lstm","gru"].forEach(buildStepper);
+readColors();
+renderAll();
+showTab(location.hash.slice(1)||"elman");
+</script>
+</body>
+</html>
